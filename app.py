@@ -264,7 +264,7 @@ def process_references():
             
             # Create table if not exists
             cursor.execute('''
-                CREATE TABLE IF NOT EXISTS references (
+                CREATE TABLE IF NOT EXISTS bibliography (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     session_id TEXT,
                     key TEXT UNIQUE,
@@ -293,7 +293,7 @@ def process_references():
             for _, row in df.iterrows():
                 try:
                     cursor.execute('''
-                        INSERT OR REPLACE INTO references 
+                        INSERT OR REPLACE INTO bibliography 
                         (session_id, key, type, authors, title, journal_booktitle, year, 
                          publisher, volume, pages, doi, bibtex, crossref_bibtex, 
                          title_similarity, journal_abbreviation, crossref_bibtex_abbrev, 
@@ -311,7 +311,7 @@ def process_references():
                     ))
                 except sqlite3.IntegrityError:
                     cursor.execute('''
-                        UPDATE references SET
+                        UPDATE bibliography SET
                         type=?, authors=?, title=?, journal_booktitle=?, year=?,
                         publisher=?, volume=?, pages=?, doi=?, bibtex=?, 
                         crossref_bibtex=?, title_similarity=?, journal_abbreviation=?,
@@ -362,7 +362,7 @@ def get_database_entries():
         cursor = conn.cursor()
         
         cursor.execute('''
-            SELECT * FROM references ORDER BY created_at DESC LIMIT 100
+            SELECT * FROM bibliography ORDER BY created_at DESC LIMIT 100
         ''')
         
         columns = [description[0] for description in cursor.description]
@@ -384,7 +384,7 @@ def delete_entry(key):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('DELETE FROM references WHERE key=?', (key,))
+        cursor.execute('DELETE FROM bibliography WHERE key=?', (key,))
         conn.commit()
         conn.close()
         
@@ -397,7 +397,7 @@ def export_database():
     """Export database as CSV"""
     try:
         conn = get_db_connection()
-        df = pd.read_sql_query('SELECT * FROM references', conn)
+        df = pd.read_sql_query('SELECT * FROM bibliography', conn)
         conn.close()
         
         output = io.StringIO()
@@ -419,7 +419,7 @@ def export_bibtex():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT key, crossref_bibtex_protected FROM references ORDER BY key')
+        cursor.execute('SELECT key, crossref_bibtex_protected FROM bibliography ORDER BY key')
         
         bibtex_content = '\n\n'.join([row[1] for row in cursor.fetchall()])
         
@@ -441,13 +441,13 @@ def get_stats():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        cursor.execute('SELECT COUNT(*) FROM references')
+        cursor.execute('SELECT COUNT(*) FROM bibliography')
         total = cursor.fetchone()[0]
         
-        cursor.execute('SELECT COUNT(DISTINCT type) FROM references')
+        cursor.execute('SELECT COUNT(DISTINCT type) FROM bibliography')
         types = cursor.fetchone()[0]
         
-        cursor.execute('SELECT COUNT(DISTINCT SUBSTR(year, 1, 4)) FROM references WHERE year IS NOT NULL AND year != ""')
+        cursor.execute('SELECT COUNT(DISTINCT SUBSTR(year, 1, 4)) FROM bibliography WHERE year IS NOT NULL AND year != ""')
         years = cursor.fetchone()[0]
         
         conn.close()
