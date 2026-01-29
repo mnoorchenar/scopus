@@ -91,20 +91,29 @@ def parse_bibtex_input(bibtex_content):
 def clean_bibtex_fields(bibtex):
     """Remove unwanted fields from BibTeX entries"""
     # Fields to remove
-    fields_to_remove = ['url', 'source', 'publication_stage', 'note']
+    fields_to_remove = ['url', 'source', 'publication_stage', 'note', 'abstract']
     
     for field in fields_to_remove:
-        # Remove field with its value (handles multi-line values)
+        # Remove field with its value (handles multi-line values and nested braces)
+        # Pattern matches: field = {value}, or field = {value} at end
         bibtex = re.sub(
-            rf'\s*{field}\s*=\s*\{{[^}}]*\}},?\s*',
-            '\n ',
+            rf'\s*{field}\s*=\s*\{{[^}}]*\}},?\s*\n?',
+            '\n',
             bibtex,
-            flags=re.IGNORECASE
+            flags=re.IGNORECASE | re.DOTALL
         )
     
-    # Clean up extra commas and whitespace
+    # Clean up multiple consecutive newlines
+    bibtex = re.sub(r'\n\s*\n\s*\n', '\n\n', bibtex)
+    
+    # Clean up extra commas
     bibtex = re.sub(r',\s*,', ',', bibtex)
     bibtex = re.sub(r',(\s*)\}', r'\1}', bibtex)
+    
+    # Clean up lines with only whitespace
+    lines = bibtex.split('\n')
+    cleaned_lines = [line for line in lines if line.strip()]
+    bibtex = '\n'.join(cleaned_lines)
     
     return bibtex
 
@@ -135,6 +144,220 @@ def protect_acronyms_in_fields(bibtex):
         )
 
     return bibtex
+
+def enrich_with_crossref(df):
+    """Enrich references with Crossref data"""
+    enriched_rows = []
+    
+    for idx, row in df.iterrows():
+        enriched_data = dict(row)
+        
+        if not row['Title']:
+            enriched_data['Crossref_BibTeX'] = row['BibTeX']
+            enriched_data['Title_Similarity'] = 0
+            enriched_rows.append(enriched_data)
+            continue
+
+        query = " ".join(filter(None, [
+            row['Title'],
+            row['Authors'].split(',')[0] if row['Authors'] else "",
+            row['Journal/Booktitle'],
+            row['Year'],
+            row['Publisher']
+        ]))
+
+        try:
+            url = f"https://api.crossref.org/works?query.bibliographic={requests.utils.quote(query)}&rows=3"
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            items = response.json().get("message", {}).get("items", [])
+
+            best_score = 0
+            crossref_bibtex = row['BibTeX']
+
+            for item in items:
+                cr_title = item.get("title", [""])[0]
+                score = SequenceMatcher(None, row['Title'].lower(), cr_title.lower()).ratio()
+                
+                if score > best_score:
+                    best_score = score
+                    if "DOI" in item:
+                        try:
+                            bibtex_response = requests.get(
+                                f"https://doi.org/{item['DOI']}",
+                                headers={"Accept": "application/x-bibtex"},
+                                timeout=10
+                            )
+                            if bibtex_response.status_code == 200:
+                                crossref_bibtex = bibtex_response.text.strip()
+                        except:
+                            pass
+
+            enriched_data['Crossref_BibTeX'] = crossref_bibtex if best_score >= 0.95 else row['BibTeX']
+            enriched_data['Title_Similarity'] = int(round(best_score * 100))
+            
+        except Exception as e:
+            enriched_data['Crossref_BibTeX'] = row['BibTeX']
+            enriched_data['Title_Similarity'] = 0
+
+        time.sleep(0.1 + random.uniform(0, 0.2))
+        enriched_rows.append(enriched_data)
+
+    return pd.DataFrame(enriched_rows)
+
+def get_bibtex_from_titles(titles_list):
+    """Get BibTeX from Crossref using only paper titles"""
+    papers = []
+    
+    for idx, title in enumerate(titles_list):
+        title = title.strip()
+        if not title:
+            continue
+            
+        try:
+            # Search Crossref for the title
+            url = f"https://api.crossref.org/works?query.title={requests.utils.quote(title)}&rows=1"
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            items = response.json().get("message", {}).get("items", [])
+            
+            if items:
+                item = items[0]
+                cr_title = item.get("title", [""])[0]
+                
+                # Check if title matches reasonably well
+                score = SequenceMatcher(None, title.lower(), cr_title.lower()).ratio()
+                
+                if score >= 0.7:  # Accept if 70% match or better
+                    # Get BibTeX from DOI
+                    bibtex_text = ""
+                    if "DOI" in item:
+                        try:
+                            bibtex_response = requests.get(
+                                f"https://doi.org/{item['DOI']}",
+                                headers={"Accept": "application/x-bibtex"},
+                                timeout=10
+                            )
+                            if bibtex_response.status_code == 200:
+                                bibtex_text = bibtex_response.text.strip()
+                        except:
+                            pass
+                    
+                    # Parse the BibTeX to extract fields
+                    if bibtex_text:
+                        match = re.match(r'@(\w+)\s*\{([^,]+),', bibtex_text)
+                        entry_type = match.group(1) if match else "article"
+                        entry_key = match.group(2) if match else f"crossref_{idx+1}"
+                        
+                        fields = dict(re.findall(
+                            r'(\w+)\s*=\s*\{((?:[^{}]|\{[^}]*\})*)\}', 
+                            bibtex_text, flags=re.DOTALL
+                        ))
+                        
+                        papers.append({
+                            "Key": entry_key.strip(),
+                            "Type": entry_type,
+                            "Authors": fields.get("author", "").strip(),
+                            "Title": fields.get("title", cr_title).strip(),
+                            "Journal/Booktitle": fields.get("journal", fields.get("booktitle", "")).strip(),
+                            "Year": fields.get("year", "").strip(),
+                            "Publisher": fields.get("publisher", "").strip(),
+                            "Volume": fields.get("volume", "").strip(),
+                            "Pages": fields.get("pages", "").strip(),
+                            "DOI": fields.get("doi", item.get("DOI", "")).strip(),
+                            "BibTeX": bibtex_text,
+                            "Crossref_BibTeX": bibtex_text,
+                            "Title_Similarity": int(round(score * 100)),
+                            "Imported_Date": datetime.now().isoformat()
+                        })
+                    else:
+                        # Couldn't get BibTeX, create basic entry from Crossref metadata
+                        authors = []
+                        if "author" in item:
+                            authors = [f"{a.get('family', '')}, {a.get('given', '')}" for a in item.get("author", [])]
+                        
+                        year = ""
+                        if "published-print" in item:
+                            year = str(item["published-print"].get("date-parts", [[""]])[0][0])
+                        elif "published-online" in item:
+                            year = str(item["published-online"].get("date-parts", [[""]])[0][0])
+                        
+                        papers.append({
+                            "Key": f"crossref_{idx+1}",
+                            "Type": item.get("type", "article"),
+                            "Authors": " and ".join(authors),
+                            "Title": cr_title,
+                            "Journal/Booktitle": item.get("container-title", [""])[0] if item.get("container-title") else "",
+                            "Year": year,
+                            "Publisher": item.get("publisher", ""),
+                            "Volume": item.get("volume", ""),
+                            "Pages": item.get("page", ""),
+                            "DOI": item.get("DOI", ""),
+                            "BibTeX": "",
+                            "Crossref_BibTeX": "",
+                            "Title_Similarity": int(round(score * 100)),
+                            "Imported_Date": datetime.now().isoformat()
+                        })
+                else:
+                    # Low match score, record as not found
+                    papers.append({
+                        "Key": f"not_found_{idx+1}",
+                        "Type": "article",
+                        "Authors": "",
+                        "Title": title + " (NOT FOUND - low match)",
+                        "Journal/Booktitle": "",
+                        "Year": "",
+                        "Publisher": "",
+                        "Volume": "",
+                        "Pages": "",
+                        "DOI": "",
+                        "BibTeX": "",
+                        "Crossref_BibTeX": "",
+                        "Title_Similarity": int(round(score * 100)),
+                        "Imported_Date": datetime.now().isoformat()
+                    })
+            else:
+                # No results found
+                papers.append({
+                    "Key": f"not_found_{idx+1}",
+                    "Type": "article",
+                    "Authors": "",
+                    "Title": title + " (NOT FOUND)",
+                    "Journal/Booktitle": "",
+                    "Year": "",
+                    "Publisher": "",
+                    "Volume": "",
+                    "Pages": "",
+                    "DOI": "",
+                    "BibTeX": "",
+                    "Crossref_BibTeX": "",
+                    "Title_Similarity": 0,
+                    "Imported_Date": datetime.now().isoformat()
+                })
+                
+        except Exception as e:
+            # Error occurred
+            papers.append({
+                "Key": f"error_{idx+1}",
+                "Type": "article",
+                "Authors": "",
+                "Title": title + f" (ERROR: {str(e)})",
+                "Journal/Booktitle": "",
+                "Year": "",
+                "Publisher": "",
+                "Volume": "",
+                "Pages": "",
+                "DOI": "",
+                "BibTeX": "",
+                "Crossref_BibTeX": "",
+                "Title_Similarity": 0,
+                "Imported_Date": datetime.now().isoformat()
+            })
+        
+        # Rate limiting
+        time.sleep(0.2 + random.uniform(0, 0.3))
+    
+    return pd.DataFrame(papers)
 
 def enrich_with_crossref(df):
     """Enrich references with Crossref data"""
@@ -248,30 +471,53 @@ def index():
 
 @app.route('/api/process', methods=['POST'])
 def process_references():
-    """Process BibTeX input"""
+    """Process BibTeX or Title input"""
     try:
         data = request.json
-        bibtex_content = data.get('bibtex_content', '')
+        input_content = data.get('bibtex_content', '')
+        input_mode = data.get('input_mode', 'bibtex')  # 'bibtex' or 'title'
         enrich = data.get('enrich', False)
         abbreviate = data.get('abbreviate', False)
         protect = data.get('protect', False)
         save_to_db = data.get('save_to_db', False)
         
-        if not bibtex_content.strip():
-            return jsonify({'error': 'No BibTeX content provided'}), 400
+        if not input_content.strip():
+            return jsonify({'error': 'No content provided'}), 400
 
-        # Parse BibTeX
-        df = parse_bibtex_input(bibtex_content)
-        
-        if df.empty:
-            return jsonify({'error': 'No valid BibTeX entries found'}), 400
+        # Handle based on input mode
+        if input_mode == 'title':
+            # Split by newlines to get individual titles
+            titles = [line.strip() for line in input_content.strip().split('\n') if line.strip()]
+            
+            if not titles:
+                return jsonify({'error': 'No titles provided'}), 400
+            
+            # Get BibTeX from Crossref for each title
+            df = get_bibtex_from_titles(titles)
+            
+            if df.empty:
+                return jsonify({'error': 'No results found from Crossref'}), 400
+            
+            # In title mode, we already have Crossref data
+            # Skip the enrich step but set up the columns
+            if 'Crossref_BibTeX' not in df.columns:
+                df['Crossref_BibTeX'] = df['BibTeX']
+            if 'Title_Similarity' not in df.columns:
+                df['Title_Similarity'] = 0
+                
+        else:  # bibtex mode
+            # Parse BibTeX
+            df = parse_bibtex_input(input_content)
+            
+            if df.empty:
+                return jsonify({'error': 'No valid BibTeX entries found'}), 400
 
-        # Add enrichment if requested
-        if enrich:
-            df = enrich_with_crossref(df)
-        else:
-            df['Crossref_BibTeX'] = df['BibTeX']
-            df['Title_Similarity'] = 0
+            # Add enrichment if requested
+            if enrich:
+                df = enrich_with_crossref(df)
+            else:
+                df['Crossref_BibTeX'] = df['BibTeX']
+                df['Title_Similarity'] = 0
 
         # Add abbreviations if requested
         if abbreviate:

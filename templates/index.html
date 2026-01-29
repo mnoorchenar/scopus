@@ -395,13 +395,29 @@
     <div class="container">
         <header>
             <h1>📚 Reference Management System</h1>
-            <p>Paste your BibTeX content, process it, and save to database</p>
+            <p>Process BibTeX entries or search by title - Get clean, standardized references</p>
         </header>
 
         <div class="main-grid">
             <!-- Input Panel -->
             <div class="card">
-                <h2>📝 Input BibTeX</h2>
+                <h2>📝 Input</h2>
+                
+                <!-- Input Mode Selector -->
+                <div class="mode-selector" style="margin-bottom: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px;">
+                    <div style="margin-bottom: 10px; font-weight: 600; color: #333;">Input Mode:</div>
+                    <div style="display: flex; gap: 20px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="radio" name="inputMode" value="bibtex" checked onchange="switchInputMode()">
+                            <span><strong>BibTeX Mode</strong> - Paste complete BibTeX entries</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="radio" name="inputMode" value="title" onchange="switchInputMode()">
+                            <span><strong>Title Mode</strong> - Paste paper titles (one per line)</span>
+                        </label>
+                    </div>
+                </div>
+                
                 <textarea id="bibtexInput" placeholder="Paste your BibTeX entries here...
 @article{example2024,
   author = {Author Name},
@@ -464,7 +480,6 @@
                 <div class="tabs">
                     <button class="tab-button active" onclick="switchTab('preview')">Preview</button>
                     <button class="tab-button" onclick="switchTab('bibtex')">BibTeX</button>
-                    <button class="tab-button" onclick="switchTab('json')">Full Data</button>
                 </div>
 
                 <div id="preview" class="tab-content active">
@@ -474,10 +489,6 @@
 
                 <div id="bibtex" class="tab-content">
                     <div id="bibtexPreview" class="bibtex-preview">No results yet</div>
-                </div>
-
-                <div id="json" class="tab-content">
-                    <div id="jsonPreview" class="bibtex-preview">No results yet</div>
                 </div>
 
                 <div class="message" id="resultMessage"></div>
@@ -525,9 +536,24 @@
                 <h2>ℹ️ Help & Information</h2>
                 
                 <div style="margin-top: 20px;">
+                    <h3 style="color: #333; margin: 20px 0 10px;">Input Modes</h3>
+                    <dl style="margin-left: 20px; line-height: 1.8;">
+                        <dt style="font-weight: 600; margin-top: 10px;">📝 BibTeX Mode</dt>
+                        <dd style="margin-left: 20px; color: #666;">Paste complete BibTeX entries. The system can enrich them with Crossref, apply abbreviations, and protect acronyms.</dd>
+                        
+                        <dt style="font-weight: 600; margin-top: 10px;">🔍 Title Mode</dt>
+                        <dd style="margin-left: 20px; color: #666;">Paste only paper titles (one per line). The system automatically searches Crossref and retrieves complete BibTeX entries for each title. Perfect when you have a list of paper titles and need full references!</dd>
+                    </dl>
+                    
                     <h3 style="color: #333; margin: 20px 0 10px;">How to Use</h3>
                     <ol style="line-height: 1.8; margin-left: 20px;">
-                        <li><strong>Paste BibTeX:</strong> Copy and paste your BibTeX entries into the input area</li>
+                        <li><strong>Choose Mode:</strong> Select BibTeX Mode or Title Mode</li>
+                        <li><strong>Paste Content:</strong> 
+                            <ul>
+                                <li>BibTeX Mode: Copy and paste your BibTeX entries</li>
+                                <li>Title Mode: Paste paper titles, one per line</li>
+                            </ul>
+                        </li>
                         <li><strong>Select Options:</strong> Choose which processing steps to apply</li>
                         <li><strong>Process:</strong> Click "Process References" to start</li>
                         <li><strong>View Results:</strong> See processed data in the Results panel</li>
@@ -604,13 +630,47 @@
             }
         }
 
+        function switchInputMode() {
+            const selectedMode = document.querySelector('input[name="inputMode"]:checked').value;
+            const textarea = document.getElementById('bibtexInput');
+            const enrichCheckbox = document.getElementById('enrichCheckbox');
+            
+            if (selectedMode === 'title') {
+                textarea.placeholder = `Paste paper titles here (one per line)...
+
+Example:
+Deep learning for image classification
+Machine learning applications in healthcare
+Natural language processing techniques`;
+                
+                // In title mode, we always get from Crossref, so disable/hide enrich option
+                enrichCheckbox.checked = false;
+                enrichCheckbox.disabled = true;
+                enrichCheckbox.parentElement.style.opacity = '0.5';
+            } else {
+                textarea.placeholder = `Paste your BibTeX entries here...
+@article{example2024,
+  author = {Author Name},
+  title = {Article Title},
+  journal = {Journal Name},
+  year = {2024}
+}`;
+                
+                enrichCheckbox.disabled = false;
+                enrichCheckbox.checked = true;
+                enrichCheckbox.parentElement.style.opacity = '1';
+            }
+        }
+
         async function processReferences() {
             const bibtexContent = document.getElementById('bibtexInput').value;
+            const inputMode = document.querySelector('input[name="inputMode"]:checked').value;
             const loading = document.getElementById('loadingIndicator');
             const message = document.getElementById('inputMessage');
 
             if (!bibtexContent.trim()) {
-                showMessage(message, 'Please paste BibTeX content first', 'error');
+                const contentType = inputMode === 'title' ? 'titles' : 'BibTeX content';
+                showMessage(message, `Please paste ${contentType} first`, 'error');
                 return;
             }
 
@@ -625,6 +685,7 @@
                     },
                     body: JSON.stringify({
                         bibtex_content: bibtexContent,
+                        input_mode: inputMode,
                         enrich: document.getElementById('enrichCheckbox').checked,
                         abbreviate: document.getElementById('abbreviateCheckbox').checked,
                         protect: document.getElementById('protectCheckbox').checked,
@@ -659,9 +720,8 @@
             const resultsInfo = document.getElementById('resultsInfo');
             const resultsTable = document.getElementById('resultsTable');
             const bibtexPreview = document.getElementById('bibtexPreview');
-            const jsonPreview = document.getElementById('jsonPreview');
 
-            const previewLimit = 10;
+            const previewLimit = 3;
             const hasMore = data.count > previewLimit;
             
             resultsInfo.innerHTML = `<strong>✅ Processed ${data.count} references</strong>${hasMore ? ` <span style="color: #666;">(Showing first ${previewLimit} in preview)</span>` : ''}`;
@@ -707,14 +767,6 @@
             }
             
             bibtexPreview.textContent = bibtexText;
-
-            // JSON view - limit preview
-            const jsonData = hasMore ? data.full_data.slice(0, previewLimit) : data.full_data;
-            let jsonText = JSON.stringify(jsonData, null, 2);
-            if (hasMore) {
-                jsonText += `\n\n// ... and ${data.count - previewLimit} more references`;
-            }
-            jsonPreview.textContent = jsonText;
         }
 
         async function loadDatabaseEntries() {
@@ -729,8 +781,15 @@
                     return;
                 }
 
-                let html = '<h3 style="color: #333; margin-bottom: 15px;">Recent Entries</h3>';
-                data.entries.slice(0, 20).forEach(entry => {
+                const previewLimit = 3;
+                const hasMore = data.count > previewLimit;
+                
+                let html = '';
+                if (hasMore) {
+                    html += `<p style="color: #666; margin-bottom: 15px; font-size: 0.95em;">Showing ${previewLimit} of ${data.count} total entries (Export to see all)</p>`;
+                }
+                
+                data.entries.slice(0, previewLimit).forEach(entry => {
                     html += `
                         <div class="db-entry-card">
                             <h4>
