@@ -1,3 +1,14 @@
+---
+title: Reference Management System
+emoji: 📚
+colorFrom: blue
+colorTo: purple
+sdk: docker
+sdk_version: "latest"
+app_file: app.py
+pinned: false
+---
+
 # Reference Management System
 
 A simple web app to process and organize BibTeX references.
