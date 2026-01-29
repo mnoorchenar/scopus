@@ -88,6 +88,26 @@ def parse_bibtex_input(bibtex_content):
 
     return pd.DataFrame(papers).drop_duplicates(subset="Key", keep="first").reset_index(drop=True)
 
+def clean_bibtex_fields(bibtex):
+    """Remove unwanted fields from BibTeX entries"""
+    # Fields to remove
+    fields_to_remove = ['url', 'source', 'publication_stage', 'note']
+    
+    for field in fields_to_remove:
+        # Remove field with its value (handles multi-line values)
+        bibtex = re.sub(
+            rf'\s*{field}\s*=\s*\{{[^}}]*\}},?\s*',
+            '\n ',
+            bibtex,
+            flags=re.IGNORECASE
+        )
+    
+    # Clean up extra commas and whitespace
+    bibtex = re.sub(r',\s*,', ',', bibtex)
+    bibtex = re.sub(r',(\s*)\}', r'\1}', bibtex)
+    
+    return bibtex
+
 def protect_acronyms_in_fields(bibtex):
     """Protect acronyms with braces"""
     def clean_field(field_name, text):
@@ -203,6 +223,15 @@ def add_journal_abbreviations(df):
         row_data['Crossref_BibTeX_Protected'] = protect_acronyms_in_fields(
             row_data.get('Crossref_BibTeX_Abbrev', row['BibTeX'])
         )
+        
+        # Clean unwanted fields from all BibTeX versions
+        row_data['BibTeX'] = clean_bibtex_fields(row_data['BibTeX'])
+        if row_data.get('Crossref_BibTeX'):
+            row_data['Crossref_BibTeX'] = clean_bibtex_fields(row_data['Crossref_BibTeX'])
+        if row_data.get('Crossref_BibTeX_Abbrev'):
+            row_data['Crossref_BibTeX_Abbrev'] = clean_bibtex_fields(row_data['Crossref_BibTeX_Abbrev'])
+        if row_data.get('Crossref_BibTeX_Protected'):
+            row_data['Crossref_BibTeX_Protected'] = clean_bibtex_fields(row_data['Crossref_BibTeX_Protected'])
         
         abbreviated_rows.append(row_data)
 
@@ -409,6 +438,23 @@ def export_database():
             mimetype='text/csv',
             as_attachment=True,
             download_name='references_export.csv'
+        )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/database/download', methods=['GET'])
+def download_database():
+    """Download the SQLite database file"""
+    try:
+        db_path = app.config['DATABASE']
+        if not os.path.exists(db_path):
+            return jsonify({'error': 'Database file not found'}), 404
+        
+        return send_file(
+            db_path,
+            mimetype='application/x-sqlite3',
+            as_attachment=True,
+            download_name='refs_management.db'
         )
     except Exception as e:
         return jsonify({'error': str(e)}), 500

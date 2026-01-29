@@ -514,6 +514,7 @@
                     <button class="export-btn" onclick="loadDatabaseEntries()">🔄 Refresh</button>
                     <button class="export-btn" onclick="exportCSV()">📥 Export CSV</button>
                     <button class="export-btn" onclick="exportBibTeX()">📥 Export BibTeX</button>
+                    <button class="export-btn" onclick="downloadDatabase()">💾 Download Database</button>
                 </div>
 
                 <div id="databaseEntries"></div>
@@ -660,7 +661,10 @@
             const bibtexPreview = document.getElementById('bibtexPreview');
             const jsonPreview = document.getElementById('jsonPreview');
 
-            resultsInfo.innerHTML = `<strong>✅ Processed ${data.count} references</strong>`;
+            const previewLimit = 10;
+            const hasMore = data.count > previewLimit;
+            
+            resultsInfo.innerHTML = `<strong>✅ Processed ${data.count} references</strong>${hasMore ? ` <span style="color: #666;">(Showing first ${previewLimit} in preview)</span>` : ''}`;
 
             // Table view
             let tableHtml = '<table class="results-table"><thead><tr>';
@@ -670,7 +674,8 @@
             });
             tableHtml += '</tr></thead><tbody>';
 
-            data.data.forEach(row => {
+            const displayData = data.data.slice(0, previewLimit);
+            displayData.forEach(row => {
                 tableHtml += '<tr>';
                 tableHtml += `<td><span class="badge badge-info">${row.Key}</span></td>`;
                 tableHtml += `<td>${row.Type}</td>`;
@@ -680,21 +685,36 @@
                 tableHtml += '</tr>';
             });
 
+            if (hasMore) {
+                tableHtml += `<tr><td colspan="5" style="text-align: center; padding: 20px; color: #666; font-style: italic;">... and ${data.count - previewLimit} more references (check Database tab or export to see all)</td></tr>`;
+            }
+
             tableHtml += '</tbody></table>';
             resultsTable.innerHTML = tableHtml;
 
-            // BibTeX view
+            // BibTeX view - limit to first few entries
             let bibtexText = '';
-            data.full_data.forEach(row => {
+            const displayFullData = data.full_data.slice(0, previewLimit);
+            displayFullData.forEach(row => {
                 const bibField = document.getElementById('protectCheckbox').checked ? 
                     'Crossref_BibTeX_Protected' : 
                     'Crossref_BibTeX_Abbrev';
                 bibtexText += (row[bibField] || row.BibTeX) + '\n\n';
             });
+            
+            if (hasMore) {
+                bibtexText += `\n... and ${data.count - previewLimit} more references\n(Export BibTeX from Database tab to get all entries)`;
+            }
+            
             bibtexPreview.textContent = bibtexText;
 
-            // JSON view
-            jsonPreview.textContent = JSON.stringify(data.full_data, null, 2);
+            // JSON view - limit preview
+            const jsonData = hasMore ? data.full_data.slice(0, previewLimit) : data.full_data;
+            let jsonText = JSON.stringify(jsonData, null, 2);
+            if (hasMore) {
+                jsonText += `\n\n// ... and ${data.count - previewLimit} more references`;
+            }
+            jsonPreview.textContent = jsonText;
         }
 
         async function loadDatabaseEntries() {
@@ -768,6 +788,10 @@
 
         async function exportBibTeX() {
             window.location.href = '/api/database/export-bibtex';
+        }
+
+        async function downloadDatabase() {
+            window.location.href = '/api/database/download';
         }
 
         function clearInput() {
