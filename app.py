@@ -3,8 +3,10 @@ Flask Application for Reference Management Pipeline
 Complete implementation matching overleaf.py functionality
 Includes LaTeX citation parsing, BibTeX processing, and full pipeline
 
-FIXED: Now handles both 'bibtex' and 'bibtex_content' from HTML frontend
-ADDED: Title mode support - search Crossref by paper titles
+UPDATES:
+- Fixed abbreviations to include periods (ISO 4 standard): "Energy" → "Ener."
+- Added endpoint to clear entire database
+- Better abbreviation rules for journal names
 """
 
 from flask import Flask, render_template, request, jsonify, send_file
@@ -35,7 +37,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # Prepositions to keep lowercase in abbreviations
-LOWERCASE_WORDS = {"and", "or", "in", "on", "of", "for", "to", "the", "a", "an"}
+LOWERCASE_WORDS = {"and", "or", "in", "on", "of", "for", "to", "the", "a", "an", "with", "at", "by", "from"}
 
 # =====================================================================
 # HTTP CLIENT WITH RETRIES
@@ -150,16 +152,35 @@ def merge_citations_with_bib(citations_df: pd.DataFrame, bib_df: pd.DataFrame) -
 # =====================================================================
 
 def abbreviate_journal_custom(title: str) -> str:
-    """Custom abbreviation: capitalize, no dots, prepositions lowercase."""
+    """
+    Custom abbreviation with periods (ISO 4 standard)
+    Examples:
+      "Energy" → "Ener."
+      "Applied Energy" → "Appl. Ener."
+      "Journal of Energy" → "J. of Ener."
+      "IEEE Transactions on Neural Networks" → "IEEE Trans. on Neural Netw."
+    """
     if not title:
         return ""
+    
     words = title.split()
     abbr = []
+    
     for i, word in enumerate(words):
+        # Keep prepositions and conjunctions in lowercase (except at start)
         if word.lower() in LOWERCASE_WORDS and i != 0:
             abbr.append(word.lower())
+        # Keep acronyms as-is (words with 2+ uppercase letters)
+        elif sum(1 for c in word if c.isupper()) >= 2:
+            abbr.append(word)
+        # Abbreviate long words (>4 letters) with period
+        elif len(word) > 4:
+            # Take first 4 letters and add period
+            abbr.append(word[:4].capitalize() + ".")
+        # Short words (≤4 letters): add period
         else:
-            abbr.append(word.capitalize() if len(word) <= 4 else word[:4].capitalize())
+            abbr.append(word.capitalize() + ".")
+    
     return " ".join(abbr)
 
 def get_db_connection():
@@ -887,6 +908,38 @@ def delete_entry(key):
         
         return jsonify({'success': True})
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/database/clear', methods=['POST'])
+def clear_database():
+    """Clear all entries from database"""
+    if not check_api_key():
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Delete all entries
+        cursor.execute('DELETE FROM bibliography')
+        deleted_count = cursor.rowcount
+        
+        # Reset the auto-increment counter
+        cursor.execute('DELETE FROM sqlite_sequence WHERE name="bibliography"')
+        
+        conn.commit()
+        conn.close()
+        
+        print(f"🗑️ Cleared {deleted_count} entries from database")
+        
+        return jsonify({
+            'success': True,
+            'deleted_count': deleted_count,
+            'message': f'Successfully cleared {deleted_count} entries from database'
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/database/export', methods=['GET'])

@@ -369,6 +369,17 @@
             background: #218838;
         }
 
+        .clear-db-btn {
+            background: #dc3545;
+            padding: 10px 20px;
+            width: auto;
+            margin: 5px;
+        }
+
+        .clear-db-btn:hover {
+            background: #c82333;
+        }
+
         @media (max-width: 1024px) {
             .main-grid {
                 grid-template-columns: 1fr;
@@ -389,6 +400,10 @@
         .message.show {
             display: block;
         }
+
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -398,111 +413,15 @@
             <p>Process BibTeX entries or search by title - Get clean, standardized references</p>
         </header>
 
-        <div class="main-grid">
-            <!-- Input Panel -->
-            <div class="card">
-                <h2>📝 Input</h2>
-                
-                <!-- Input Mode Selector -->
-                <div class="mode-selector" style="margin-bottom: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px;">
-                    <div style="margin-bottom: 10px; font-weight: 600; color: #333;">Input Mode:</div>
-                    <div style="display: flex; gap: 20px;">
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                            <input type="radio" name="inputMode" value="bibtex" checked onchange="switchInputMode()">
-                            <span><strong>BibTeX Mode</strong> - Paste complete BibTeX entries</span>
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                            <input type="radio" name="inputMode" value="title" onchange="switchInputMode()">
-                            <span><strong>Title Mode</strong> - Paste paper titles (one per line)</span>
-                        </label>
-                    </div>
-                </div>
-                
-                <textarea id="bibtexInput" placeholder="Paste your BibTeX entries here...
-@article{example2024,
-  author = {Author Name},
-  title = {Article Title},
-  journal = {Journal Name},
-  year = {2024}
-}"></textarea>
-
-                <div class="options">
-                    <h3 style="color: #333; margin-bottom: 15px; font-size: 1.1em;">Processing Options</h3>
-                    
-                    <div class="option-group">
-                        <input type="checkbox" id="enrichCheckbox" checked>
-                        <label for="enrichCheckbox">
-                            <strong>🌐 Enrich with Crossref</strong>
-                            <span>Fetch metadata from Crossref API (slower but more complete)</span>
-                        </label>
-                    </div>
-
-                    <div class="option-group">
-                        <input type="checkbox" id="abbreviateCheckbox" checked>
-                        <label for="abbreviateCheckbox">
-                            <strong>📖 Apply Journal Abbreviations</strong>
-                            <span>Use LTWA abbreviations for journal names (requires ltwa.txt)</span>
-                        </label>
-                    </div>
-
-                    <div class="option-group">
-                        <input type="checkbox" id="protectCheckbox" checked>
-                        <label for="protectCheckbox">
-                            <strong>🛡️ Protect Acronyms</strong>
-                            <span>Wrap acronyms in braces to preserve capitalization</span>
-                        </label>
-                    </div>
-
-                    <div class="option-group">
-                        <input type="checkbox" id="saveDbCheckbox" checked>
-                        <label for="saveDbCheckbox">
-                            <strong>💾 Save to Database</strong>
-                            <span>Store processed references in local database</span>
-                        </label>
-                    </div>
-                </div>
-
-                <button onclick="processReferences()" id="processBtn">🚀 Process References</button>
-                <button class="secondary" onclick="clearInput()">Clear Input</button>
-
-                <div class="loading" id="loadingIndicator">
-                    <div class="spinner"></div>
-                    <p>Processing your references... This may take a moment.</p>
-                </div>
-
-                <div class="message" id="inputMessage"></div>
-            </div>
-
-            <!-- Results Panel -->
-            <div class="card">
-                <h2>📊 Results</h2>
-                
-                <div class="tabs">
-                    <button class="tab-button active" onclick="switchTab('preview')">Preview</button>
-                    <button class="tab-button" onclick="switchTab('bibtex')">BibTeX</button>
-                </div>
-
-                <div id="preview" class="tab-content active">
-                    <div id="resultsInfo" style="color: #666; margin-bottom: 15px;"></div>
-                    <div id="resultsTable"></div>
-                </div>
-
-                <div id="bibtex" class="tab-content">
-                    <div id="bibtexPreview" class="bibtex-preview">No results yet</div>
-                </div>
-
-                <div class="message" id="resultMessage"></div>
-            </div>
-        </div>
-
-        <!-- Database Tab -->
+        <!-- Main Tabs -->
         <div class="card">
             <div class="tabs">
-                <button class="tab-button active" onclick="switchMainTab('database')">Database</button>
-                <button class="tab-button" onclick="switchMainTab('help')">Help & Info</button>
+                <button class="tab-button active" onclick="switchMainTab('database')">💾 Database</button>
+                <button class="tab-button" onclick="switchMainTab('process')">🔄 Process References</button>
+                <button class="tab-button" onclick="switchMainTab('help')">ℹ️ Help & Info</button>
             </div>
 
-            <!-- Database Content -->
+            <!-- Database Tab (Default) -->
             <div id="database" class="tab-content active">
                 <h2>💾 Database Management</h2>
                 
@@ -526,9 +445,110 @@
                     <button class="export-btn" onclick="exportCSV()">📥 Export CSV</button>
                     <button class="export-btn" onclick="exportBibTeX()">📥 Export BibTeX</button>
                     <button class="export-btn" onclick="downloadDatabase()">💾 Download Database</button>
+                    <button class="clear-db-btn" onclick="clearDatabase()">🗑️ Clear Entire Database</button>
                 </div>
 
                 <div id="databaseEntries"></div>
+            </div>
+
+            <!-- Process References Tab -->
+            <div id="process" class="tab-content">
+                <div class="main-grid">
+                    <!-- Input Panel -->
+                    <div>
+                        <h2>📝 Input</h2>
+                        
+                        <!-- Input Mode Selector -->
+                        <div class="mode-selector" style="margin-bottom: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px;">
+                            <div style="margin-bottom: 10px; font-weight: 600; color: #333;">Input Mode:</div>
+                            <div style="display: flex; gap: 20px;">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="radio" name="inputMode" value="bibtex" checked onchange="switchInputMode()">
+                                    <span><strong>BibTeX Mode</strong> - Paste complete BibTeX entries</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="radio" name="inputMode" value="title" onchange="switchInputMode()">
+                                    <span><strong>Title Mode</strong> - Paste paper titles (one per line)</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <textarea id="bibtexInput" placeholder="Paste your BibTeX entries here...
+@article{example2024,
+  author = {Author Name},
+  title = {Article Title},
+  journal = {Journal Name},
+  year = {2024}
+}"></textarea>
+
+                        <div class="options">
+                            <h3 style="color: #333; margin-bottom: 15px; font-size: 1.1em;">Processing Options</h3>
+                            
+                            <div class="option-group">
+                                <input type="checkbox" id="enrichCheckbox" checked>
+                                <label for="enrichCheckbox">
+                                    <strong>🌐 Enrich with Crossref</strong>
+                                    <span>Fetch metadata from Crossref API (slower but more complete)</span>
+                                </label>
+                            </div>
+
+                            <div class="option-group">
+                                <input type="checkbox" id="abbreviateCheckbox" checked>
+                                <label for="abbreviateCheckbox">
+                                    <strong>📖 Apply Journal Abbreviations</strong>
+                                    <span>Use ISO 4 standard abbreviations (e.g., "Energy" → "Ener.")</span>
+                                </label>
+                            </div>
+
+                            <div class="option-group">
+                                <input type="checkbox" id="protectCheckbox" checked>
+                                <label for="protectCheckbox">
+                                    <strong>🛡️ Protect Acronyms</strong>
+                                    <span>Wrap acronyms in braces to preserve capitalization</span>
+                                </label>
+                            </div>
+
+                            <div class="option-group">
+                                <input type="checkbox" id="saveDbCheckbox" checked>
+                                <label for="saveDbCheckbox">
+                                    <strong>💾 Save to Database</strong>
+                                    <span>Store processed references in local database</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <button onclick="processReferences()" id="processBtn">🚀 Process References</button>
+                        <button class="secondary" onclick="clearInput()">Clear Input</button>
+
+                        <div class="loading" id="loadingIndicator">
+                            <div class="spinner"></div>
+                            <p>Processing your references... This may take a moment.</p>
+                        </div>
+
+                        <div class="message" id="inputMessage"></div>
+                    </div>
+
+                    <!-- Results Panel -->
+                    <div>
+                        <h2>📊 Results</h2>
+                        
+                        <div class="tabs">
+                            <button class="tab-button active" onclick="switchTab('preview')">Preview</button>
+                            <button class="tab-button" onclick="switchTab('bibtex')">BibTeX</button>
+                        </div>
+
+                        <div id="preview" class="tab-content active">
+                            <div id="resultsInfo" style="color: #666; margin-bottom: 15px;"></div>
+                            <div id="resultsTable"></div>
+                        </div>
+
+                        <div id="bibtex" class="tab-content">
+                            <div id="bibtexPreview" class="bibtex-preview">No results yet</div>
+                        </div>
+
+                        <div class="message" id="resultMessage"></div>
+                    </div>
+                </div>
             </div>
 
             <!-- Help Content -->
@@ -545,19 +565,29 @@
                         <dd style="margin-left: 20px; color: #666;">Paste only paper titles (one per line). The system automatically searches Crossref and retrieves complete BibTeX entries for each title. Perfect when you have a list of paper titles and need full references!</dd>
                     </dl>
                     
+                    <h3 style="color: #333; margin: 20px 0 10px;">Journal Abbreviations (NEW!)</h3>
+                    <p style="margin-left: 20px; color: #666; line-height: 1.8;">
+                        The system now uses <strong>ISO 4 standard abbreviations with periods</strong>:
+                    </p>
+                    <ul style="margin-left: 40px; color: #666; line-height: 1.8;">
+                        <li>"Energy" → "Ener."</li>
+                        <li>"Applied Energy" → "Appl. Ener."</li>
+                        <li>"Journal of Energy" → "J. of Ener."</li>
+                        <li>"IEEE Transactions on Neural Networks" → "IEEE Trans. on Neural Netw."</li>
+                    </ul>
+                    
                     <h3 style="color: #333; margin: 20px 0 10px;">How to Use</h3>
                     <ol style="line-height: 1.8; margin-left: 20px;">
-                        <li><strong>Choose Mode:</strong> Select BibTeX Mode or Title Mode</li>
-                        <li><strong>Paste Content:</strong> 
-                            <ul>
-                                <li>BibTeX Mode: Copy and paste your BibTeX entries</li>
-                                <li>Title Mode: Paste paper titles, one per line</li>
+                        <li><strong>Database Tab (Default):</strong> View and manage your saved references</li>
+                        <li><strong>Process Tab:</strong> Add new references
+                            <ul style="margin-left: 20px;">
+                                <li>Choose BibTeX Mode or Title Mode</li>
+                                <li>Paste your content</li>
+                                <li>Select processing options</li>
+                                <li>Click "Process References"</li>
                             </ul>
                         </li>
-                        <li><strong>Select Options:</strong> Choose which processing steps to apply</li>
-                        <li><strong>Process:</strong> Click "Process References" to start</li>
-                        <li><strong>View Results:</strong> See processed data in the Results panel</li>
-                        <li><strong>Save:</strong> Optionally save to database for future reference</li>
+                        <li><strong>Clear Database:</strong> Use the red "Clear Entire Database" button to remove all entries and start fresh</li>
                     </ol>
 
                     <h3 style="color: #333; margin: 20px 0 10px;">Processing Options Explained</h3>
@@ -566,7 +596,7 @@
                         <dd style="margin-left: 20px; color: #666;">Queries Crossref API to fetch updated metadata and BibTeX. Takes 3-5 seconds per entry.</dd>
                         
                         <dt style="font-weight: 600; margin-top: 10px;">📖 Journal Abbreviations</dt>
-                        <dd style="margin-left: 20px; color: #666;">Requires <code>ltwa.txt</code> file in the same directory. Replaces full journal names with standard abbreviations.</dd>
+                        <dd style="margin-left: 20px; color: #666;">Replaces full journal names with ISO 4 standard abbreviations with periods.</dd>
                         
                         <dt style="font-weight: 600; margin-top: 10px;">🛡️ Protect Acronyms</dt>
                         <dd style="margin-left: 20px; color: #666;">Wraps acronyms and multi-letter words in braces to preserve capitalization in LaTeX.</dd>
@@ -575,13 +605,6 @@
                         <dd style="margin-left: 20px; color: #666;">Stores all versions (original, enriched, abbreviated, protected) for future use.</dd>
                     </dl>
 
-                    <h3 style="color: #333; margin: 20px 0 10px;">File Requirements</h3>
-                    <ul style="margin-left: 20px;">
-                        <li><strong>ltwa.txt:</strong> Optional file with journal abbreviations (tab-separated format)</li>
-                        <li>Place in the same directory as the Flask app</li>
-                        <li>Format: <code>Full Journal Name[TAB]Abbreviation</code></li>
-                    </ul>
-
                     <h3 style="color: #333; margin: 20px 0 10px;">Data Storage</h3>
                     <p style="margin-left: 20px; color: #666;">
                         All data is stored in <code>refs_management.db</code> (SQLite). The database includes:
@@ -589,7 +612,7 @@
                     <ul style="margin-left: 20px;">
                         <li>Original BibTeX</li>
                         <li>Enriched metadata from Crossref</li>
-                        <li>Journal abbreviations</li>
+                        <li>Journal abbreviations with periods (ISO 4)</li>
                         <li>Acronym-protected versions</li>
                         <li>Timestamps and session info</li>
                     </ul>
@@ -602,10 +625,14 @@
         let lastResults = null;
 
         function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(el => {
+            // Switch between Preview and BibTeX in results
+            const parent = event.target.closest('.card') || document;
+            parent.querySelectorAll('.tab-content').forEach(el => {
+                if (el.id === 'database' || el.id === 'process' || el.id === 'help') return;
                 el.classList.remove('active');
             });
-            document.querySelectorAll('.tab-button').forEach(el => {
+            parent.querySelectorAll('.tab-button').forEach(el => {
+                if (el.textContent.includes('Database') || el.textContent.includes('Process') || el.textContent.includes('Help')) return;
                 el.classList.remove('active');
             });
             
@@ -614,10 +641,10 @@
         }
 
         function switchMainTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(el => {
+            document.querySelectorAll('#database, #process, #help').forEach(el => {
                 el.classList.remove('active');
             });
-            document.querySelectorAll('.tab-button').forEach(el => {
+            document.querySelectorAll('.tabs > .tab-button').forEach(el => {
                 el.classList.remove('active');
             });
             
@@ -643,7 +670,6 @@ Deep learning for image classification
 Machine learning applications in healthcare
 Natural language processing techniques`;
                 
-                // In title mode, we always get from Crossref, so disable/hide enrich option
                 enrichCheckbox.checked = false;
                 enrichCheckbox.disabled = true;
                 enrichCheckbox.parentElement.style.opacity = '0.5';
@@ -726,7 +752,6 @@ Natural language processing techniques`;
             
             resultsInfo.innerHTML = `<strong>✅ Processed ${data.count} references</strong>${hasMore ? ` <span style="color: #666;">(Showing first ${previewLimit} in preview)</span>` : ''}`;
 
-            // Table view
             let tableHtml = '<table class="results-table"><thead><tr>';
             const columns = ['Key', 'Type', 'Authors', 'Title', 'Year'];
             columns.forEach(col => {
@@ -752,7 +777,6 @@ Natural language processing techniques`;
             tableHtml += '</tbody></table>';
             resultsTable.innerHTML = tableHtml;
 
-            // BibTeX view - limit to first few entries
             let bibtexText = '';
             const displayFullData = data.full_data.slice(0, previewLimit);
             displayFullData.forEach(row => {
@@ -781,7 +805,7 @@ Natural language processing techniques`;
                     return;
                 }
 
-                const previewLimit = 3;
+                const previewLimit = 5;
                 const hasMore = data.count > previewLimit;
                 
                 let html = '';
@@ -828,6 +852,35 @@ Natural language processing techniques`;
             }
         }
 
+        async function clearDatabase() {
+            if (!confirm('⚠️ WARNING: This will permanently delete ALL entries from the database.\n\nAre you absolutely sure you want to continue?')) {
+                return;
+            }
+
+            // Double confirmation
+            if (!confirm('This action CANNOT be undone. All your references will be lost.\n\nClick OK to proceed with clearing the database.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/database/clear', {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`✅ ${result.message}`);
+                    loadDatabaseEntries();
+                    loadStats();
+                } else {
+                    alert(`❌ Error: ${result.error}`);
+                }
+            } catch (error) {
+                alert('Error clearing database: ' + error.message);
+            }
+        }
+
         async function loadStats() {
             try {
                 const response = await fetch('/api/stats');
@@ -863,8 +916,11 @@ Natural language processing techniques`;
             element.style.display = 'block';
         }
 
-        // Initial load
-        loadStats();
+        // Initial load - Database tab is default
+        window.addEventListener('DOMContentLoaded', function() {
+            loadStats();
+            loadDatabaseEntries();
+        });
     </script>
 </body>
 </html>
