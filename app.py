@@ -3,11 +3,8 @@ Flask Application for Reference Management Pipeline
 Complete implementation matching overleaf.py functionality
 Includes LaTeX citation parsing, BibTeX processing, and full pipeline
 
-FIXED ISSUES:
-- API endpoints now handle both JSON and form data
-- Development mode bypasses authentication
-- Better error handling and logging
-- All overleaf.py functionality verified and included
+FIXED: Now handles both 'bibtex' and 'bibtex_content' from HTML frontend
+ADDED: Title mode support - search Crossref by paper titles
 """
 
 from flask import Flask, render_template, request, jsonify, send_file
@@ -24,11 +21,12 @@ from urllib3.util.retry import Retry
 import io
 import time
 import random
+import hashlib
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.config['DATABASE'] = 'refs_management.db'
-app.config['API_KEY'] = os.environ.get('API_KEY', 'dev-key-12345')
+app.config['API_KEY'] = os.environ.get('API_KEY', 'your-secret-key-here')
 app.config['ENVIRONMENT'] = os.environ.get('ENVIRONMENT', 'development')
 app.config['UPLOAD_FOLDER'] = '/tmp/uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
@@ -67,16 +65,11 @@ HTTP = make_http_session()
 
 def check_api_key():
     """Check API key for protected routes"""
-    # In development mode, allow all requests
     if app.config['ENVIRONMENT'] == 'development':
-        print("🔓 Development mode - bypassing authentication")
         return True
     
     api_key = request.headers.get('X-API-Key')
-    valid = api_key == app.config['API_KEY']
-    if not valid:
-        print(f"⚠️ Invalid API key: {api_key}")
-    return valid
+    return api_key == app.config['API_KEY']
 
 # =====================================================================
 # LATEX CITATION PARSING (from overleaf.py)
@@ -180,7 +173,7 @@ def init_db():
     conn = get_db_connection()
     cur = conn.cursor()
     
-    # Create table with all columns in proper order matching overleaf.py
+    # Create table with all columns in proper order
     cur.execute("""
         CREATE TABLE IF NOT EXISTS bibliography (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -222,7 +215,6 @@ def init_db():
     
     conn.commit()
     conn.close()
-    print("✅ Database initialized")
 
 def extract_year_int(year_str):
     """Extract integer year from year string"""
@@ -297,7 +289,6 @@ def parse_bibtex_entry(entry_text):
 
 def parse_bibtex_input(bibtex_content):
     """Parse BibTeX content from user input"""
-    print("📖 Parsing BibTeX content")
     entries = ["@" + e for e in bibtex_content.split("@") if e.strip()]
     papers = []
 
@@ -323,9 +314,7 @@ def parse_bibtex_input(bibtex_content):
             "Imported_Date": datetime.now().isoformat()
         })
 
-    df = pd.DataFrame(papers).drop_duplicates(subset="Key", keep="first").reset_index(drop=True)
-    print(f"✅ Parsed {len(df)} BibTeX records")
-    return df
+    return pd.DataFrame(papers).drop_duplicates(subset="Key", keep="first").reset_index(drop=True)
 
 def clean_bibtex_fields(bibtex):
     """Remove unwanted fields from BibTeX entries"""
@@ -364,7 +353,7 @@ def clean_bibtex_fields(bibtex):
     return '\n'.join(lines)
 
 def protect_acronyms_in_fields(bibtex):
-    """Protect acronyms with braces (matches overleaf.py)"""
+    """Protect acronyms with braces"""
     if not bibtex:
         return bibtex
         
@@ -416,22 +405,18 @@ def replace_bibtex_key(bibtex, new_key):
         return bibtex
 
 def enrich_with_crossref(df):
-    """Enrich references with Crossref data (matches overleaf.py functionality)"""
-    print("🌐 Enriching references with Crossref metadata")
+    """Enrich references with Crossref data"""
     enriched_rows = []
     
     for idx, row in df.iterrows():
-        print(f"\n[{idx+1}/{len(df)}] Processing Reference={row.get('Reference') or row.get('Key')}")
         enriched_data = dict(row)
         
         if not row.get('Title'):
-            print("⚠️ Skipping (no title)")
             enriched_data['Crossref_BibTeX'] = row.get('BibTeX', '')
             enriched_data['Title_Similarity'] = 0
             enriched_rows.append(enriched_data)
             continue
 
-        # Build query
         query_parts = [row['Title']]
         if row.get('Authors'):
             query_parts.append(row['Authors'].split(',')[0])
@@ -439,8 +424,6 @@ def enrich_with_crossref(df):
             query_parts.append(row['Journal/Booktitle'])
         if row.get('Year'):
             query_parts.append(row['Year'])
-        if row.get('Publisher'):
-            query_parts.append(row['Publisher'])
         
         query = " ".join(query_parts)
 
@@ -453,13 +436,11 @@ def enrich_with_crossref(df):
             best_score = 0
             crossref_bibtex = row.get('BibTeX', '')
             best_doi = row.get('DOI', '')
-            best_item = None
 
             for item in items:
                 cr_title = item.get("title", [""])[0]
                 score = SequenceMatcher(None, row['Title'].lower(), cr_title.lower()).ratio()
                 
-                # Boost score if year matches
                 if row.get('Year') and 'published-print' in item:
                     cr_year = str(item['published-print'].get('date-parts', [['']])[0][0])
                     if row['Year'].strip() == cr_year:
@@ -467,51 +448,37 @@ def enrich_with_crossref(df):
                 
                 if score > best_score:
                     best_score = score
-                    best_item = item
                     best_doi = item.get('DOI', best_doi)
+                    
+                    if best_doi:
+                        try:
+                            bibtex_response = HTTP.get(
+                                f"https://doi.org/{best_doi}",
+                                headers={"Accept": "application/x-bibtex"},
+                                timeout=15
+                            )
+                            if bibtex_response.status_code == 200:
+                                crossref_bibtex = bibtex_response.text.strip()
+                        except Exception as e:
+                            print(f"⚠️ BibTeX fetch failed for DOI {best_doi}: {e}")
 
-            # Fetch BibTeX if we have a good match
-            if best_item and best_doi and best_score >= 0.85:
-                try:
-                    bibtex_response = HTTP.get(
-                        f"https://doi.org/{best_doi}",
-                        headers={"Accept": "application/x-bibtex"},
-                        timeout=15
-                    )
-                    if bibtex_response.status_code == 200:
-                        crossref_bibtex = bibtex_response.text.strip()
-                        print(f"✅ Fetched Crossref BibTeX for DOI: {best_doi}")
-                except Exception as e:
-                    print(f"⚠️ BibTeX fetch failed for DOI {best_doi}: {e}")
-
-            # Use local BibTeX if similarity is low
-            if best_score < 0.95:
-                crossref_bibtex = row.get('BibTeX', '')
-                if best_score > 0:
-                    print(f"ℹ️ Low similarity ({int(best_score*100)}%), using local BibTeX")
-
-            enriched_data['Crossref_BibTeX'] = crossref_bibtex
+            enriched_data['Crossref_BibTeX'] = crossref_bibtex if best_score >= 0.85 else row.get('BibTeX', '')
             enriched_data['Title_Similarity'] = int(round(best_score * 100))
             if best_doi:
                 enriched_data['DOI'] = best_doi
-            
-            print(f"✅ Updated: Similarity={int(best_score*100)}%, BibTeX length={len(crossref_bibtex)}")
             
         except Exception as e:
             print(f"⚠️ Crossref enrichment failed: {e}")
             enriched_data['Crossref_BibTeX'] = row.get('BibTeX', '')
             enriched_data['Title_Similarity'] = 0
 
-        # Rate limiting (matches overleaf.py)
-        time.sleep(random.uniform(2, 5))
+        time.sleep(0.15 + random.uniform(0, 0.25))
         enriched_rows.append(enriched_data)
 
-    print("🎉 Crossref enrichment done")
     return pd.DataFrame(enriched_rows)
 
 def add_journal_abbreviations(df):
-    """Add journal abbreviations and create all BibTeX versions (matches overleaf.py pipeline)"""
-    print("📤 Adding journal abbreviations and creating BibTeX versions")
+    """Add journal abbreviations and create all BibTeX versions"""
     abbreviated_rows = []
     
     for idx, row in df.iterrows():
@@ -521,7 +488,7 @@ def add_journal_abbreviations(df):
         row_data = dict(row)
         row_data['Journal_Abbreviation'] = journal_abbrev
         
-        # Step 1: Create LocalKey version (matches add_crossref_bibtex_with_local_keys)
+        # Create LocalKey version
         key_to_use = row_data.get('Key') or row_data.get('Reference') or f"ref_{idx}"
         
         if row_data.get('Crossref_BibTeX'):
@@ -532,7 +499,7 @@ def add_journal_abbreviations(df):
         else:
             row_data['Crossref_BibTeX_LocalKey'] = row_data.get('BibTeX', '')
         
-        # Step 2: Create abbreviated version (matches add_crossref_bibtex_with_abbrev)
+        # Create abbreviated version
         if journal_abbrev and row_data.get('Crossref_BibTeX_LocalKey'):
             new_bib = row_data['Crossref_BibTeX_LocalKey'].strip()
             new_bib = re.sub(
@@ -545,21 +512,19 @@ def add_journal_abbreviations(df):
         else:
             row_data['Crossref_BibTeX_Abbrev'] = row_data.get('Crossref_BibTeX_LocalKey', row_data.get('BibTeX', ''))
         
-        # Step 3: Create protected version (matches add_crossref_bibtex_with_protected_titles)
+        # Create protected version
         row_data['Crossref_BibTeX_Protected'] = protect_acronyms_in_fields(
             row_data.get('Crossref_BibTeX_Abbrev', row_data.get('BibTeX', ''))
         )
         
-        # Step 4: Clean all versions
+        # Clean all versions
         for bib_col in ['BibTeX', 'Crossref_BibTeX', 'Crossref_BibTeX_LocalKey', 
                         'Crossref_BibTeX_Abbrev', 'Crossref_BibTeX_Protected']:
             if row_data.get(bib_col):
                 row_data[bib_col] = clean_bibtex_fields(row_data[bib_col])
         
-        print(f"✅ Updated {key_to_use}")
         abbreviated_rows.append(row_data)
 
-    print("✅ All BibTeX versions created (LocalKey, Abbrev, Protected)")
     return pd.DataFrame(abbreviated_rows)
 
 # =====================================================================
@@ -569,161 +534,7 @@ def add_journal_abbreviations(df):
 @app.route('/')
 def index():
     """Main page"""
-    return """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Reference Management API</title>
-        <style>
-            body { font-family: Arial, sans-serif; max-width: 1200px; margin: 50px auto; padding: 20px; }
-            h1 { color: #333; }
-            .endpoint { background: #f5f5f5; padding: 15px; margin: 15px 0; border-left: 4px solid #007bff; }
-            .method { display: inline-block; padding: 5px 10px; background: #007bff; color: white; border-radius: 3px; }
-            code { background: #e9ecef; padding: 2px 6px; border-radius: 3px; }
-            .test-form { background: #fff3cd; padding: 15px; margin: 15px 0; border: 1px solid #ffc107; }
-        </style>
-    </head>
-    <body>
-        <h1>📚 Reference Management API</h1>
-        <p>Complete BibTeX and LaTeX reference management system</p>
-        
-        <div class="endpoint">
-            <span class="method">POST</span> <code>/api/process</code>
-            <p>Process BibTeX content (text input)</p>
-            <details>
-                <summary>Click to test</summary>
-                <div class="test-form">
-                    <form id="processForm">
-                        <textarea name="bibtex" rows="10" cols="80" placeholder="Paste BibTeX here..."></textarea><br>
-                        <label><input type="checkbox" name="enrich"> Enrich with Crossref</label><br>
-                        <label><input type="checkbox" name="save_to_db"> Save to database</label><br>
-                        <button type="submit">Process</button>
-                    </form>
-                    <pre id="processResult"></pre>
-                </div>
-            </details>
-        </div>
-        
-        <div class="endpoint">
-            <span class="method">POST</span> <code>/api/process-latex</code>
-            <p>Process LaTeX + BibTeX files (full pipeline)</p>
-            <details>
-                <summary>Click to test</summary>
-                <div class="test-form">
-                    <form id="latexForm" enctype="multipart/form-data">
-                        <label>LaTeX file (.tex): <input type="file" name="tex_file" accept=".tex"></label><br>
-                        <label>BibTeX file (.bib): <input type="file" name="bib_file" accept=".bib"></label><br>
-                        <label><input type="checkbox" name="enrich"> Enrich with Crossref</label><br>
-                        <label><input type="checkbox" name="save_to_db"> Save to database</label><br>
-                        <button type="submit">Process Files</button>
-                    </form>
-                    <pre id="latexResult"></pre>
-                </div>
-            </details>
-        </div>
-        
-        <div class="endpoint">
-            <span class="method">POST</span> <code>/api/process-bib-only</code>
-            <p>Process BibTeX file only (Mode 1)</p>
-            <details>
-                <summary>Click to test</summary>
-                <div class="test-form">
-                    <form id="bibOnlyForm" enctype="multipart/form-data">
-                        <label>BibTeX file (.bib): <input type="file" name="bib_file" accept=".bib"></label><br>
-                        <label><input type="checkbox" name="save_to_db"> Save to database</label><br>
-                        <button type="submit">Process File</button>
-                    </form>
-                    <pre id="bibOnlyResult"></pre>
-                </div>
-            </details>
-        </div>
-        
-        <div class="endpoint">
-            <span class="method">GET</span> <code>/api/stats</code>
-            <p>Get database statistics</p>
-            <button onclick="fetchStats()">Get Stats</button>
-            <pre id="statsResult"></pre>
-        </div>
-        
-        <script>
-            // Process BibTeX text
-            document.getElementById('processForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                const data = {
-                    bibtex: formData.get('bibtex'),
-                    enrich: formData.get('enrich') === 'on',
-                    save_to_db: formData.get('save_to_db') === 'on'
-                };
-                
-                document.getElementById('processResult').textContent = 'Processing...';
-                
-                try {
-                    const response = await fetch('/api/process', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(data)
-                    });
-                    const result = await response.json();
-                    document.getElementById('processResult').textContent = JSON.stringify(result, null, 2);
-                } catch (error) {
-                    document.getElementById('processResult').textContent = 'Error: ' + error.message;
-                }
-            });
-            
-            // Process LaTeX files
-            document.getElementById('latexForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                
-                document.getElementById('latexResult').textContent = 'Processing...';
-                
-                try {
-                    const response = await fetch('/api/process-latex', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const result = await response.json();
-                    document.getElementById('latexResult').textContent = JSON.stringify(result, null, 2);
-                } catch (error) {
-                    document.getElementById('latexResult').textContent = 'Error: ' + error.message;
-                }
-            });
-            
-            // Process BibTeX file only
-            document.getElementById('bibOnlyForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                
-                document.getElementById('bibOnlyResult').textContent = 'Processing...';
-                
-                try {
-                    const response = await fetch('/api/process-bib-only', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const result = await response.json();
-                    document.getElementById('bibOnlyResult').textContent = JSON.stringify(result, null, 2);
-                } catch (error) {
-                    document.getElementById('bibOnlyResult').textContent = 'Error: ' + error.message;
-                }
-            });
-            
-            // Get stats
-            async function fetchStats() {
-                document.getElementById('statsResult').textContent = 'Loading...';
-                try {
-                    const response = await fetch('/api/stats');
-                    const result = await response.json();
-                    document.getElementById('statsResult').textContent = JSON.stringify(result, null, 2);
-                } catch (error) {
-                    document.getElementById('statsResult').textContent = 'Error: ' + error.message;
-                }
-            }
-        </script>
-    </body>
-    </html>
-    """
+    return render_template('index.html')
 
 @app.route('/api/process', methods=['POST'])
 def process_bibtex():
@@ -732,23 +543,60 @@ def process_bibtex():
         return jsonify({'error': 'Unauthorized'}), 401
     
     try:
-        # Handle both JSON and form data
-        if request.is_json:
-            data = request.get_json()
-            bibtex_content = data.get('bibtex', '')
-            enrich = data.get('enrich', False)
-            abbreviate = data.get('abbreviate', False)
-            protect = data.get('protect', False)
-            save_to_db = data.get('save_to_db', False)
-        else:
-            bibtex_content = request.form.get('bibtex', '')
-            enrich = request.form.get('enrich', 'false').lower() == 'true'
-            abbreviate = request.form.get('abbreviate', 'false').lower() == 'true'
-            protect = request.form.get('protect', 'false').lower() == 'true'
-            save_to_db = request.form.get('save_to_db', 'false').lower() == 'true'
+        data = request.get_json()
         
-        print(f"📥 Received BibTeX content: {len(bibtex_content)} characters")
+        # Handle both 'bibtex' and 'bibtex_content' field names (for HTML compatibility)
+        bibtex_content = data.get('bibtex_content') or data.get('bibtex', '')
+        input_mode = data.get('input_mode', 'bibtex')
+        enrich = data.get('enrich', False)
+        abbreviate = data.get('abbreviate', False)
+        protect = data.get('protect', False)
+        save_to_db = data.get('save_to_db', False)
         
+        print(f"📥 Received: {len(bibtex_content)} chars, mode={input_mode}")
+        
+        # TITLE MODE: Search Crossref for each title
+        if input_mode == 'title':
+            titles = [line.strip() for line in bibtex_content.split('\n') if line.strip()]
+            print(f"🔍 Title mode: searching for {len(titles)} titles")
+            
+            if not titles:
+                return jsonify({'error': 'No titles provided'}), 400
+            
+            # Convert titles to BibTeX entries via Crossref
+            bibtex_entries = []
+            for i, title in enumerate(titles, 1):
+                print(f"  [{i}/{len(titles)}] Searching: {title[:50]}...")
+                try:
+                    # Search Crossref
+                    url = f"https://api.crossref.org/works?query.bibliographic={requests.utils.quote(title)}&rows=1"
+                    response = HTTP.get(url, timeout=15)
+                    items = response.json().get("message", {}).get("items", [])
+                    
+                    if items and items[0].get('DOI'):
+                        doi = items[0]['DOI']
+                        # Fetch BibTeX
+                        bibtex_r = HTTP.get(
+                            f"https://doi.org/{doi}",
+                            headers={"Accept": "application/x-bibtex"},
+                            timeout=15
+                        )
+                        if bibtex_r.status_code == 200:
+                            bibtex_entries.append(bibtex_r.text.strip())
+                            print(f"    ✅ Found via DOI: {doi}")
+                    
+                    time.sleep(random.uniform(1, 2))
+                except Exception as e:
+                    print(f"    ⚠️ Failed: {e}")
+            
+            # Join all found entries
+            bibtex_content = '\n\n'.join(bibtex_entries)
+            print(f"✅ Retrieved {len(bibtex_entries)} BibTeX entries from titles")
+            
+            if not bibtex_content:
+                return jsonify({'error': 'No BibTeX entries found for the provided titles'}), 400
+        
+        # Normal BibTeX mode validation
         if not bibtex_content or len(bibtex_content.strip()) == 0:
             return jsonify({'error': 'No BibTeX content provided'}), 400
         
@@ -832,7 +680,7 @@ def process_bibtex():
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return jsonify({'error': str(e), 'traceback': traceback.format_exc()}), 500
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/process-latex', methods=['POST'])
 def process_latex():
@@ -841,8 +689,6 @@ def process_latex():
         return jsonify({'error': 'Unauthorized'}), 401
     
     try:
-        print("📥 Processing LaTeX files")
-        
         # Get files from form data
         if 'tex_file' not in request.files or 'bib_file' not in request.files:
             return jsonify({'error': 'Both tex_file and bib_file are required'}), 400
@@ -857,8 +703,6 @@ def process_latex():
         tex_content = tex_file.read().decode('utf-8')
         bib_content = bib_file.read().decode('utf-8')
         
-        print(f"📄 LaTeX: {len(tex_content)} chars, BibTeX: {len(bib_content)} chars")
-        
         # Get options
         enrich = request.form.get('enrich', 'false').lower() == 'true'
         save_to_db = request.form.get('save_to_db', 'false').lower() == 'true'
@@ -869,18 +713,18 @@ def process_latex():
         # Parse BibTeX
         bib_df = parse_bibtex_input(bib_content)
         
-        # Merge (matches overleaf.py)
+        # Merge
         merged_df = merge_citations_with_bib(citations_df, bib_df)
         merged_df.insert(0, "Index", range(1, len(merged_df) + 1))
         
-        # Enrich if requested (matches overleaf.py)
+        # Enrich if requested
         if enrich:
             merged_df = enrich_with_crossref(merged_df)
         else:
             merged_df['Crossref_BibTeX'] = merged_df['BibTeX']
             merged_df['Title_Similarity'] = 0
         
-        # Add abbreviations and create all versions (matches overleaf.py pipeline)
+        # Add abbreviations and create all versions
         merged_df = add_journal_abbreviations(merged_df)
         
         # Save to database if requested
@@ -925,8 +769,6 @@ def process_latex():
             db_id = session_id
             conn.close()
         
-        print(f"✅ Processing complete: {len(merged_df)} entries")
-        
         return jsonify({
             'success': True,
             'count': len(merged_df),
@@ -938,7 +780,7 @@ def process_latex():
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return jsonify({'error': str(e), 'traceback': traceback.format_exc()}), 500
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/process-bib-only', methods=['POST'])
 def process_bib_only():
@@ -947,8 +789,6 @@ def process_bib_only():
         return jsonify({'error': 'Unauthorized'}), 401
     
     try:
-        print("📥 Processing BibTeX file only")
-        
         if 'bib_file' not in request.files:
             return jsonify({'error': 'bib_file is required'}), 400
         
@@ -960,12 +800,10 @@ def process_bib_only():
         bib_content = bib_file.read().decode('utf-8')
         save_to_db = request.form.get('save_to_db', 'false').lower() == 'true'
         
-        print(f"📄 BibTeX: {len(bib_content)} chars")
-        
         # Parse BibTeX
         df = parse_bibtex_input(bib_content)
         
-        # Add "Used" column (empty by default) - matches overleaf.py Mode 1
+        # Add "Used" column (empty by default)
         df["Used"] = None
         
         # Save to database if requested
@@ -998,8 +836,6 @@ def process_bib_only():
             db_id = session_id
             conn.close()
         
-        print(f"✅ Parsed {len(df)} entries")
-        
         return jsonify({
             'success': True,
             'count': len(df),
@@ -1010,7 +846,7 @@ def process_bib_only():
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return jsonify({'error': str(e), 'traceback': traceback.format_exc()}), 500
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/database/entries', methods=['GET'])
 def get_database_entries():
@@ -1019,10 +855,8 @@ def get_database_entries():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        limit = request.args.get('limit', 100, type=int)
-        
-        cursor.execute(f'''
-            SELECT * FROM bibliography ORDER BY created_at DESC LIMIT {limit}
+        cursor.execute('''
+            SELECT * FROM bibliography ORDER BY created_at DESC LIMIT 100
         ''')
         
         columns = [description[0] for description in cursor.description]
@@ -1080,19 +914,9 @@ def export_database():
 def export_bibtex():
     """Export database as BibTeX"""
     try:
-        version = request.args.get('version', 'protected')
-        
         conn = get_db_connection()
         cursor = conn.cursor()
-        
-        if version == 'protected':
-            cursor.execute('SELECT key, crossref_bibtex_protected FROM bibliography ORDER BY key')
-        elif version == 'abbrev':
-            cursor.execute('SELECT key, crossref_bibtex_abbrev FROM bibliography ORDER BY key')
-        elif version == 'localkey':
-            cursor.execute('SELECT key, crossref_bibtex_localkey FROM bibliography ORDER BY key')
-        else:
-            cursor.execute('SELECT key, bibtex FROM bibliography ORDER BY key')
+        cursor.execute('SELECT key, crossref_bibtex_protected FROM bibliography ORDER BY key')
         
         bibtex_content = '\n\n'.join([row[1] for row in cursor.fetchall() if row[1]])
         
@@ -1102,7 +926,20 @@ def export_bibtex():
             io.BytesIO(bibtex_content.encode()),
             mimetype='text/plain',
             as_attachment=True,
-            download_name=f'references_{version}.bib'
+            download_name='references.bib'
+        )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/database/download', methods=['GET'])
+def download_database():
+    """Download entire database file"""
+    try:
+        return send_file(
+            app.config['DATABASE'],
+            mimetype='application/x-sqlite3',
+            as_attachment=True,
+            download_name='refs_management.db'
         )
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1123,25 +960,16 @@ def get_stats():
         cursor.execute('SELECT COUNT(DISTINCT year_int) FROM bibliography WHERE year_int IS NOT NULL')
         years = cursor.fetchone()[0]
         
-        cursor.execute('SELECT COUNT(*) FROM bibliography WHERE crossref_bibtex IS NOT NULL AND crossref_bibtex != ""')
-        enriched = cursor.fetchone()[0]
-        
         conn.close()
         
         return jsonify({
             'total_entries': total,
             'entry_types': types,
-            'unique_years': years,
-            'crossref_enriched': enriched
+            'unique_years': years
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    print("🚀 Starting Reference Management API")
-    print(f"Environment: {app.config['ENVIRONMENT']}")
-    print(f"Database: {app.config['DATABASE']}")
-    
     init_db()
-    
-    app.run(debug=True, host='0.0.0.0', port=7860)
+    app.run(debug=False, host='0.0.0.0', port=7860)
