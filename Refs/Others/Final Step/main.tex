@@ -1,0 +1,472 @@
+%% 
+%% Copyright 2007-2024 Elsevier Ltd
+%% 
+%% This file is part of the 'Elsarticle Bundle'.
+%% ---------------------------------------------
+%% 
+%% It may be distributed under the conditions of the LaTeX Project Public
+%% License, either version 1.3 of this license or (at your option) any
+%% later version.  The latest version of this license is in
+%%    http://www.latex-project.org/lppl.txt
+%% and version 1.3 or later is part of all distributions of LaTeX
+%% version 1999/12/01 or later.
+%% 
+%% The list of all files belonging to the 'Elsarticle Bundle' is
+%% given in the file `manifest.txt'.
+%% 
+%% Template article for Elsevier's document class `elsarticle'
+%% with numbered style bibliographic references
+%% SP 2008/03/01
+%% $Id: elsarticle-template-num.tex 249 2024-04-06 10:51:24Z rishi $
+%%
+%\documentclass[preprint,12pt]{elsarticle}
+\documentclass[3p]{elsarticle}
+\usepackage{hyperref}
+
+\usepackage[font=normalsize]{caption}
+\captionsetup[table]{format=plain, justification=raggedright, labelsep=none, singlelinecheck=false, labelfont=bf}
+
+\usepackage{booktabs}
+\usepackage{siunitx} % For aligning numbers by the decimal point
+\usepackage{makecell}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{rotating}
+
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+\usepackage{soul}
+
+%% Use the option review to obtain double line spacing
+%% \documentclass[authoryear,preprint,review,12pt]{elsarticle}
+
+%% Use the options 1p,twocolumn; 3p; 3p,twocolumn; 5p; or 5p,twocolumn
+%% for a journal layout:
+%% \documentclass[final,1p,times]{elsarticle}
+%% \documentclass[final,1p,times,twocolumn]{elsarticle}
+%% \documentclass[final,3p,times]{elsarticle}
+%% \documentclass[final,3p,times,twocolumn]{elsarticle}
+%% \documentclass[final,5p,times]{elsarticle}
+%% \documentclass[final,5p,times,twocolumn]{elsarticle}
+
+%% For including figures, graphicx.sty has been loaded in
+%% elsarticle.cls. If you prefer to use the old commands
+%% please give \usepackage{epsfig}
+
+%% The amssymb package provides various useful mathematical symbols
+\usepackage{amssymb}
+%% The amsmath package provides various useful equation environments.
+\usepackage{amsmath}
+%% The amsthm package provides extended theorem environments
+%% \usepackage{amsthm}
+
+%% The lineno packages adds line numbers. Start line numbering with
+%% \begin{linenumbers}, end it with \end{linenumbers}. Or switch it on
+%% for the whole article with \linenumbers.
+%% \usepackage{lineno}
+
+\journal{Energy and Buildings}
+
+\begin{document}
+
+\begin{frontmatter}
+
+%% Title, authors and addresses
+
+%% use the tnoteref command within \title for footnotes;
+%% use the tnotetext command for theassociated footnote;
+%% use the fnref command within \author or \affiliation for footnotes;
+%% use the fntext command for theassociated footnote;
+%% use the corref command within \author for corresponding author footnotes;
+%% use the cortext command for theassociated footnote;
+%% use the ead command for the email address,
+%% and the form \ead[url] for the home page:
+%% \title{Title\tnoteref{label1}}
+%% \tnotetext[label1]{}
+%% \author{Name\corref{cor1}\fnref{label2}}
+%% \ead{email address}
+%% \ead[url]{home page}
+%% \fntext[label2]{}
+%% \cortext[cor1]{}
+%% \affiliation{organization={},
+%%             addressline={},
+%%             city={},
+%%             postcode={},
+%%             state={},
+%%             country={}}
+%% \fntext[label3]{}
+
+\title{Multi-Modal Machine Learning for Prediction of Post Operative Care Unit Recovery Time}
+
+%% use optional labels to link authors explicitly to addresses:
+%% \author[label1,label2]{}
+%% \affiliation[label1]{organization={},
+%%             addressline={},
+%%             city={},
+%%             postcode={},
+%%             state={},
+%%             country={}}
+%%
+%% \affiliation[label2]{organization={},
+%%             addressline={},
+%%             city={},
+%%             postcode={},
+%%             state={},
+%%             country={}}
+
+% %% Author affiliation
+% %% Author and affiliation section
+
+%% Abstract
+\begin{abstract}
+\textbf{Background:} Efficient management in the Post-Anesthesia Care Unit (PACU) is critical for patient safety, resource allocation and hospital operations; yet, estimating recovery duration remains a challenge. Traditional regression models and discharge scoring systems have shown limited accuracy and reliability across patient populations.
+
+\textbf{Methods:} We developed and evaluated machine learning models for prediction of PACU recovery duration using an institution-wide dataset of 203,393 surgical cases collected between January 2012 and July 2025. Structured variables (demographics, surgical metrics, provider identifiers, timing features) were integrated with unstructured operative narratives transformed into biomedical SBERT embeddings, yielding a multi-modal dataset. Model classes included linear regression, tree-based ensembles, gradient-boosting methods, and deep learning architectures. Model performance was evaluated using robust validation procedures to ensure findings were not dependent on a single patient group or time period.
+
+\textbf{Results:} Gradient-boosted tree ensembles demonstrated the best performance, with XGBoost achieving a mean absolute error of approximately 42 minutes and explaining over one-third of the variance in recovery time. Nearly 70\% of predictions fell within 60 minutes of observed recovery duration, a margin considered clinically acceptable for postoperative recovery planning. Statistical testing confirmed significant improvements over linear baselines, conventional ensembles, and neural networks. Explainability analyses revealed that operative narratives provided the greatest predictive signal, while provider identifiers and surgical location also contributed, reflecting both patient-level complexity and system-level workflow factors.
+
+\textbf{Conclusions:} Combining structured perioperative variables with embeddings of operative narratives enables accurate and interpretable PACU recovery prediction at scale. These models can support operating room scheduling, staffing allocation, and patient communication. Future work should include external validation and integration into real-time perioperative systems.
+
+
+\end{abstract}
+
+%%Graphical abstract
+% https://www.elsevier.com/researcher/author/tools-and-resources/graphical-abstract
+\begin{graphicalabstract}
+% \includegraphics{grabs}
+\scalebox{0.22}{\includegraphics{graphical-abstract.png}}
+\end{graphicalabstract}
+
+
+%%Research highlights
+\begin{highlights}
+\item Developed predictive models for PACU recovery using 203,393 surgical encounters  
+\item Gradient-boosted trees achieved the best accuracy, with mean error $\approx$42 minutes  
+\item Nearly 70\% of recovery times predicted within a clinically acceptable 60-minute window  
+\item Operative narratives (SBERT embeddings) provided the strongest predictive signal  
+\item Results support perioperative scheduling, staffing, and patient communication
+\end{highlights}
+
+
+
+%% Keywords
+\begin{keyword}
+PACU recovery time \sep perioperative prediction \sep machine learning\sep 
+gradient boosting\sep electronic health records\sep explainable AI\sep clinical text embeddings
+
+
+\end{keyword}
+
+\end{frontmatter}
+
+% \section*{Abbreviations}
+
+% \begin{description}
+%     \item[XAI] Explainable Artificial Intelligence
+% \end{description}
+
+
+% \section*{Nomenclature}
+
+% \subsection*{Indices}
+% \begin{description}
+%     \item[$t$] Time index
+% \end{description}
+
+% \subsection*{Variables}
+% \begin{description}
+%     % \item[$\phi_j$] SHAP value for feature $j$
+% \end{description}
+
+
+
+\section{Background}\label{sec:background}
+
+Efficient management of recovery in the Post-Anesthesia Care Unit (PACU) is a pivotal component of perioperative care, with direct implications for both patient safety and hospital efficiency. The PACU is a high-risk environment in which adverse events, such as respiratory, cardiovascular, and neurologic complications, frequently occur---many of which are associated with prolonged recovery times \cite{Liu2024750,Nafiu201484,Nafiu2011340}. Patient- and procedure-related factors, including comorbidities and perioperative conditions, are strongly linked to extended PACU stays \cite{UlHuda202129,Painter2014649}. These complications not only affect immediate postoperative outcomes but also propagate upstream, creating bottlenecks in operating room workflow and reducing hospital throughput \cite{Almansouri2025}. Anticipating PACU recovery duration is therefore critical: it safeguards patients during a vulnerable transition phase while enabling hospitals to optimize perioperative capacity and scheduling.
+
+Early efforts to predict recovery time focused on risk classifications and regression-based models. The American Society of Anesthesiologists (ASA) Physical Status classification has long been used to stratify anesthetic risk, but it provides limited insight into individualized recovery trajectories and shows inconsistent associations with PACU complications and length of stay \cite{zbudak2021364,Flanigan2024211}. Similarly, regression-based models incorporating surgical duration, comorbidities, or anesthetic technique have demonstrated modest discriminatory value but are constrained by reliance on a narrow set of predictors \cite{Aspi2020490,Elsharydah202091,Fang2023,Luo2025}. Efforts to standardize discharge criteria through scoring systems have also proven inflexible, underscoring the need for more nuanced, data-driven approaches \cite{Truong200433}.
+
+More recently, the expansion of perioperative Electronic Health Record (EHR) systems and advances in analytic methods have created new opportunities for prediction. In the field of anesthesiology, machine learning approaches have outperformed traditional regression in forecasting outcomes such as postoperative delirium, intensive care unit transfer, and unplanned readmission \cite{Bishara2022,Loftus2023179}. Large-scale initiatives combining structured perioperative data with polygenic risk scores or artificial intelligence frameworks, have been able to anticipate complications such as postoperative nausea and vomiting or residual neuromuscular block \cite{Douville202552,Rudolph2018883}. Emerging work with large language models has shown promise for classification tasks, but remains limited in duration-based predictions--- including duration of PACU stays \cite{Chung2024928}. Despite this progress, few efforts have focused directly on modeling PACU recovery duration, leaving an important gap in perioperative prediction.
+
+We hypothesized that machine learning models integrating structured perioperative variables with unstructured operative narratives would enable more accurate prediction of PACU recovery duration than conventional approaches. The aim of this study was to develop and benchmark multimodal machine learning models using a large institutional dataset, to assess their predictive performance, interpretability, and clinical utility.
+
+
+\section{Methodology}
+\label{{sec:methodology}}
+\subsection{Study Design and Ethical Approval}
+We conducted a retrospective cohort study using de-identified electronic medical record data from the London Health Sciences Centre, a multi-site academic tertiary care hospital system in Ontario, Canada. The dataset included surgical encounters from January 2012 to July 2025. Ethical approval was obtained from the Research Ethics Board of Western University (London, Ontario, Canada). This study followed the Transparent Reporting of a Multivariable Prediction Model for Individual Prognosis or Diagnosis (TRIPOD-AI) guidelines\cite{collins2024tripod+}.
+
+\subsection{Patient Population}
+The initial cohort included 227,910 surgical encounters across multiple specialties. Exclusions were applied stepwise: 125 cases with rare demographic categories, 11 with rare surgical locations, 762 with invalid preoperative classifications, 19,242 without recorded PACU recovery duration, 4,232 with implausible durations, and 145 missing anesthesiologist identifiers. The final analytic cohort consisted of 203,393 valid encounters (Figure~\ref{fig:cohort-consort}).\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.65\linewidth]{consort_plot.pdf}
+  \caption{CONSORT-style cohort selection flowchart showing exclusions during data cleaning and the final analytic cohort. Initial cohort: $N{=}227{,}910$; excluded: $N{=}24{,}517$; final analytic cohort: $N{=}203{,}393$.}
+  \label{fig:cohort-consort}
+\end{figure}
+
+\subsection{Measurements and Variables}
+Structured variables included demographics, comorbidities, operative details, perioperative timestamps, provider identifiers, and surgical location. Derived features included operative duration, recovery duration, and calendar-based descriptors (weekday, month, weekend indicator). Provider identifiers were consolidated and one-hot encoded, yielding 142 surgeon- and 134 anesthesiologist-variables.
+Unstructured operative narratives (procedure descriptions, modifiers, comorbidities, diagnoses) were combined and processed using a biomedical Sentence-BERT model (S-Biomed-RoBERTa) to generate 768-dimensional embeddings per case. Missing values, such as body mass index, were imputed using machine learning–based models to preserve cohort size and plausibility.
+\subsection{Outcomes}
+The primary endpoint was PACU recovery duration, defined as the time from documented PACU arrival to discharge readiness. Secondary endpoints included model performance metrics (mean absolute error (MAE), mean squared error [MSE], $R^2$, mean absolute percentage error [MAPE], and symmetric MAPE [sMAPE]) and consistency of predictions at the encounter level.
+\subsection{Model Development}
+We evaluated four model families: \begin{enumerate}
+    \item Linear baselines including linear regression, ridge, and lasso
+    \item Tree-based methods (decision tree, random forest, extra trees)
+    \item Gradient-boosting ensembles (XGBoost, LightGBM, histogram-based boosting)
+    \item Deep learning architectures (feedforward neural networks, TabTransformer)
+\end{enumerate}
+
+Models were trained using nested cross-validation, with inner folds used for hyperparameter optimization via Optuna and outer folds reserved for unbiased performance estimation (Figure~\ref{fig:methodology}).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\linewidth]{Methodology.pdf}
+    \caption{Overview of the methodological pipeline: preprocessing, model training, and evaluation.}
+    \label{fig:methodology}
+\end{figure}
+
+\subsection{Statistical Analysis}
+Model performance was compared using fold-averaged error metrics and encounter-level pairwise comparisons of absolute error. Bootstrap resampling was used to generate 95\% confidence intervals for differences in error. Statistical significance was assessed using the Wilcoxon signed-rank test with Holm adjustment for multiple comparisons, with $p<0.05$ considered significant. Analyses were performed on aligned encounter sets to ensure comparability.
+
+\section{Results and Discussion} 
+\label{sec:Results}
+
+\subsection{Baseline Characteristics}
+The final cohort comprised 203{,}393 surgical encounters. The mean patient age was 55.6~years, with 57.5\% female. The mean body mass index (BMI) was 29.6~kg/m$^{2}$, and most patients were classified as ASA II--III. The mean post-anesthesia care unit (PACU) recovery time was 143.5~minutes. Full baseline characteristics are provided in Table~\ref{tab:baseline}.
+
+\begin{table}[H]
+\caption{\\ Baseline characteristics of the study population}
+\label{tab:baseline}
+\small
+% tighten padding inside this table only
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.11}
+
+\noindent
+\begin{minipage}[t]{\dimexpr0.5\linewidth-0.5\columnsep\relax}
+\begin{tabular}{@{}l r@{}}
+\toprule
+\multicolumn{2}{@{}l}{\textbf{Patient characteristics}}\\
+\midrule
+N (analytic cohort) & 203{,}393 \\
+Age, years, mean $\pm$ SD & 55.63 $\pm$ 17.66 \\
+Sex, n (\%) & \\
+\quad Male   & 86{,}527 (42.54\%) \\
+\quad Female & 116{,}866 (57.46\%) \\
+BMI, kg/m$^{2}$, mean $\pm$ SD & 29.56 $\pm$ 7.98 \\
+ASA physical status, n (\%) & \\
+\quad Class I   & 23{,}219 (11.42\%) \\
+\quad Class II  & 65{,}175 (32.04\%) \\
+\quad Class III & 92{,}607 (45.53\%) \\
+\quad Class IV  & 22{,}351 (10.99\%) \\
+\quad Class V   & 41 (0.02\%) \\
+\bottomrule
+\end{tabular}
+\end{minipage}%
+\hspace{-0.02\linewidth}%
+\begin{minipage}[t]{\dimexpr0.5\linewidth-0.5\columnsep\relax}
+\begin{tabular}{@{}l r@{}}
+\toprule
+\multicolumn{2}{@{}l}{\textbf{Surgical characteristics}}\\
+\midrule
+OR duration, min, mean $\pm$ SD & 140.49 $\pm$ 1658.52 \\
+PACU recovery duration, min, mean $\pm$ SD & 143.49 $\pm$ 72.50 \\
+PACU delay, min, mean $\pm$ SD & 112.23 $\pm$ 168.71 \\
+Post-op pain (AEPS), mean $\pm$ SD & 3.39 $\pm$ 2.35 \\
+Post-op pain present, n (\%) & \\
+\quad Yes & 65{,}615 (32.26\%) \\
+\quad No  & 61{,}649 (30.31\%) \\
+Case day, n (\%) & \\
+\quad Weekday & 203{,}378 (99.99\%) \\
+\quad Weekend & 15 (0.01\%) \\
+Surgical location, n (\%) & \\
+\quad VH\_OR & 107{,}902 (53.05\%) \\
+\quad UH\_OR & 86{,}101 (42.33\%) \\
+\quad VSC\_OR & 8{,}685 (4.27\%) \\
+\quad OB\_VH  & 705 (0.35\%) \\
+Unique surgeons, n & 307 \\
+Unique anesthesiologists, n & 2{,}483 \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+
+\medskip
+\par\noindent\footnotesize
+SD: standard deviation; BMI: body mass index; ASA: American Society of Anesthesiologists; PACU: post-anesthesia care unit; AEPS: average post-operative pain score.
+\end{table}
+
+
+\subsection{Model Performance}
+Predictive performance is summarized in Table~\ref{tab:model-performance}. 
+
+Linear models (ordinary least squares, ridge, lasso) achieved limited explanatory power ($R^2 = 0.16$--$0.17$) with mean squared error (MSE) values of approximately 4{,}380--4{,}405. Tree-based ensembles improved performance, with random forests ($R^2 = 0.26$) and extra trees ($R^2 = 0.21$). Boosting models demonstrated the highest accuracy. XGBoost achieved the best overall results ($R^2 = 0.36$, MAE = 42.0 minutes, sMAPE = 29.8\%), followed closely by histogram-based gradient boosting and LightGBM. Deep learning models yielded mixed results: a feedforward neural network outperformed linear baselines but underperformed boosting models, while the TabTransformer consistently showed the poorest accuracy.
+
+\begin{table}[H]
+\centering
+\caption{\\ Comparative performance of predictive models for PACU recovery duration. Values represent mean $\pm$ standard deviation across outer cross-validation folds. Bold values indicate best performance per metric.}
+\label{tab:model-performance}
+\small
+\setlength{\tabcolsep}{6pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Model} & \textbf{MSE} & \textbf{MAE} & \textbf{$R^2$} & \textbf{sMAPE} \\
+\midrule
+\multicolumn{5}{l}{\textit{Linear models}} \\
+\quad Linear          & 4384.25 $\pm$ 53.76 & 49.55 $\pm$ 0.22 & 0.17 $\pm$ 0.00 & 35.15 $\pm$ 0.15 \\
+\quad Ridge           & 4385.96 $\pm$ 51.78 & 49.56 $\pm$ 0.21 & 0.17 $\pm$ 0.00 & 35.15 $\pm$ 0.14 \\
+\quad Lasso           & 4405.14 $\pm$ 54.58 & 49.71 $\pm$ 0.22 & 0.16 $\pm$ 0.00 & 35.24 $\pm$ 0.12 \\
+\midrule
+\multicolumn{5}{l}{\textit{Tree-based models}} \\
+\quad Decision Tree   & 4906.55 $\pm$ 83.02 & 52.87 $\pm$ 0.44 & 0.07 $\pm$ 0.01 & 37.54 $\pm$ 0.29 \\
+\quad Random Forest   & 3878.28 $\pm$ 36.23 & 46.07 $\pm$ 0.18 & 0.26 $\pm$ 0.01 & 32.71 $\pm$ 0.13 \\
+\quad Extra Trees     & 4140.62 $\pm$ 57.83 & 48.04 $\pm$ 0.27 & 0.21 $\pm$ 0.00 & 34.28 $\pm$ 0.15 \\
+\midrule
+\multicolumn{5}{l}{\textit{Boosting models}} \\
+\quad Gradient Boosting       & 3485.25 $\pm$ 48.93 & 43.16 $\pm$ 0.25 & 0.34 $\pm$ 0.01 & 30.70 $\pm$ 0.19 \\
+\quad Hist. Gradient Boosting & 3445.28 $\pm$ 37.27 & 42.83 $\pm$ 0.17 & 0.34 $\pm$ 0.01 & 30.53 $\pm$ 0.13 \\
+\quad XGBoost                 & \textbf{3376.16 $\pm$ 35.16} & \textbf{42.04 $\pm$ 0.17} & \textbf{0.36 $\pm$ 0.00} & \textbf{29.83 $\pm$ 0.11} \\
+\quad LightGBM                & 3391.31 $\pm$ 27.12 & 42.32 $\pm$ 0.28 & 0.35 $\pm$ 0.01 & 30.13 $\pm$ 0.28 \\
+\midrule
+\multicolumn{5}{l}{\textit{Deep learning models}} \\
+\quad Neural Network   & 4190.48 $\pm$ 356.03 & 48.04 $\pm$ 2.33 & 0.20 $\pm$ 0.06 & 34.10 $\pm$ 1.51 \\
+\quad TabTransformer   & 5259.50 $\pm$ 57.33 & 55.29 $\pm$ 0.21 & $-0.00$ $\pm$ 0.00 & 39.27 $\pm$ 0.09 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+
+\subsection{Statistical Comparison of Models}
+Pairwise comparisons were conducted between XGBoost and all other models (Table~\ref{tab:pairwise-xgb}). XGBoost consistently outperformed all alternatives, with all adjusted $p$-values $<0.001$ after Holm correction. Relative to LightGBM, the performance difference was minimal ($\Delta$MAE = 0.3 minutes; win rate 51.3\%), indicating near-equivalent accuracy. Compared with random forests, XGBoost predictions were 4 minutes closer on average (win rate 57.2\%). Against decision trees and neural networks, differences were larger ($\Delta$MAE 7.8--10.6 minutes). The greatest margin was observed against the TabTransformer ($\Delta$MAE = 13.3 minutes; win rate 63.8\%).
+
+
+\begin{table}[H]
+\centering
+\caption{\\Pairwise comparison against XGBoost on aligned encounters. $\Delta$MAE is the mean difference in absolute error (Other$-$XGB) in minutes; positive values indicate higher error for the comparator. Bootstrap 95\% CIs are shown for the mean difference.}
+\label{tab:pairwise-xgb}
+\small
+\setlength{\tabcolsep}{6pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Model} & \textbf{Other MAE (min)} & \textbf{$\Delta$MAE (mean, min)} & \textbf{95\% CI (min)} & \textbf{Win rate (\%)} \\
+\midrule
+TabTransformer            & 55.23 & 13.30 & [12.94, 13.66] & 63.83 \\
+Decision Tree             & 52.52 & 10.59 & [10.26, 10.92] & 62.35 \\
+Neural Network            & 49.76 &  7.83 &  [7.54,  8.13] & 60.04 \\
+Lasso                     & 49.69 &  7.76 &  [7.47,  8.04] & 60.22 \\
+Linear                    & 49.51 &  7.58 &  [7.30,  7.88] & 60.01 \\
+Ridge                     & 49.51 &  7.58 &  [7.30,  7.88] & 59.99 \\
+Extra Trees               & 48.15 &  6.22 &  [5.97,  6.47] & 59.44 \\
+Random Forest             & 45.93 &  4.00 &  [3.78,  4.22] & 57.20 \\
+Hist. Gradient Boosting   & 42.61 &  0.68 &  [0.50,  0.85] & 52.36 \\
+LightGBM                  & 42.21 &  0.28 &  [0.12,  0.44] & 51.26 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Agreement and Reliability Across Recovery-Time Ranges}
+Agreement analysis for XGBoost predictions is shown in Figures~\ref{fig:agreement-and-reliability-a} and \ref{fig:agreement-and-reliability-b}. Predictions were most accurate for recovery times $\leq$180 minutes, where the majority fell within $\pm$30 minutes of the true value. Accuracy declined for longer recoveries ($>$300 minutes), which were frequently underestimated. Very short stays ($<$60 minutes) also showed larger relative errors.
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.59\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{\detokenize{01. clinical_decision_matrix.png}}
+    \captionof{figure}{Predicted versus actual PACU recovery times with 30-minute (excellent) and 60-minute (acceptable) error bands.}
+    \label{fig:agreement-and-reliability-a}
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.39\linewidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{\detokenize{02. patient_risk_stratification1.png}}
+    \captionof{figure}{Proportion of excellent ($\leq$30 min), acceptable (30–60 min), and poor (>60 min) predictions by recovery-time range.}
+    \label{fig:agreement-and-reliability-b}
+  \end{minipage}
+\end{figure}
+
+\subsection{Clinical Reliability and Error Distribution}
+Across the entire cohort, 40.3\% of encounters were predicted within $\pm$30 minutes of the actual PACU recovery time. An additional 29.0\% were within $\pm$60 minutes. In total, nearly 70\% of cases were predicted within one hour. The remaining 30.7\% of cases exceeded a 60-minute margin, representing a subset of complex encounters that accounted for most residual error (Figures~\ref{fig:reliability-twoup-a} and \ref{fig:reliability-twoup-b}).
+
+
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.55\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{03. individual_patient_absolute_errors.png}
+    \captionof{figure}{Proportion of surgical encounters with errors $\leq$30 minutes, 30–60 minutes, and >60 minutes across the full cohort.}
+    \label{fig:reliability-twoup-a}
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.42\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{04. clinical_performance_summary.png}
+    \captionof{figure}{Individual surgical encounters ranked by absolute error, showing most predictions within 60 minutes and a smaller group with very large errors.}
+    \label{fig:reliability-twoup-b}
+  \end{minipage}
+\end{figure}
+
+
+\subsection{Model Explainability and Feature Contributions}
+Feature attribution analyses (Figures~\ref{fig:top15-individual} and \ref{fig:group-importance}) demonstrated that clinical text embeddings derived from operative narratives contributed the largest share of predictive signal (78.8\%). Provider identifiers (surgeon 9.6\%; anesthesiologist 3.8\%) and surgical location (5.5\%) were also key contributors. Traditional demographic and procedural metrics accounted for smaller effects. At the individual predictor level, important variables included specific surgical sites, selected surgeon identifiers, dimensions of the SBERT embeddings, and perioperative documentation such as postoperative pain scores.
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.55\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{05.top_15_individual_features.pdf}
+    \captionof{figure}{Top 15 individual predictors of PACU recovery time, including surgical locations, provider identifiers, text-derived features, and perioperative variables.}
+    \label{fig:top15-individual}
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.42\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{06.feature_group_analysis.pdf}
+    \captionof{figure}{Relative contribution of feature families, showing the dominant role of text embeddings and the influence of provider and location information.}
+    \label{fig:group-importance}
+  \end{minipage}
+\end{figure}
+\section{Discussion}
+\label{sec:discussion}
+
+Clinically, the best-performing model (XGBoost) predicted PACU recovery time within approximately 42 minutes on average, providing a level of precision that may support perioperative scheduling and discharge planning. Modern boosting methods performed similarly to each other but significantly outperformed traditional ensembles, linear baselines, and neural models. The findings also suggest that while XGBoost is reliable for typical recovery times, its accuracy decreases in cases with extreme recovery durations. In addition, both narrative clinical context and system-level workflow factors appear to influence recovery time.
+
+Research on PACU recovery has evolved substantially, progressing from regression-based analyses to advanced predictive modeling and scheduling frameworks. Early studies demonstrated the importance of perioperative factors in PACU outcomes. For example, Kim et al.\ \cite{Kim200025} compared regression and neural network approaches to predict prolonged PACU stay, highlighting the potential of non-linear models. Truong et al.\ \cite{Truong200433} showed that discharge scoring systems could safely reduce PACU stay compared to fixed time criteria, while Dahmani et al.\ \cite{Dahmani2001385} identified predictors of opioid requirements that indirectly influenced recovery duration. Waddle et al.\ \cite{Waddle1998628} quantified the contribution of nonmedical delays, and Liu et al.\ \cite{Liu2020630} demonstrated that pain, respiratory, and cardiovascular instability were key drivers of prolonged recovery. Together, these foundational works established both clinical and operational determinants of PACU stay.
+
+More recent investigations have applied predictive modeling directly to PACU length of stay (LOS). Fang et al.\ \cite{Fang2023} developed a nomogram integrating demographic and intraoperative variables, while Elsharydah et al.\ \cite{Elsharydah202091} created a preoperative outpatient model. Tully et al.\ \cite{Tully2023} and Xie et al.\ \cite{Xie2024d} applied machine learning (ML) to forecast prolonged recovery or transfer delays, and Rupp et al.\ \cite{Rupp20231939} externally validated a large-scale preoperative prediction tool. Similarly, Gabriel et al.\ \cite{Gabriel2022159} demonstrated the value of ensemble models for outpatient throughput, and Maroufi et al.\ \cite{Maroufi2025} showed that ML could outperform Aldrete-based discharge assessments. Parallel research has expanded into PACU complications, including delirium (Tu et al.\ \cite{Tu20241655}), hypothermia (Mei et al.\ \cite{Mei20253017}), bladder discomfort (Dai et al.\ \cite{Dai2024}), and hypotension (Tol et al.\ \cite{Tol2024}), further illustrating the potential of predictive analytics in perioperative care.
+
+The present study adds to this literature by analyzing over 200{,}000 surgical encounters using a comprehensive, multimodal dataset. Consistent with prior findings, boosting-based algorithms, particularly XGBoost, outperformed regression, single trees, and deep learning models \cite{Kim200025,Gabriel2022159}. Our results differ from some reports emphasizing deep learning \cite{Maroufi2025}, likely due to dataset characteristics, hyperparameter tuning strategies, and domain-specific architectural requirements. Importantly, we demonstrate that embeddings of unstructured operative narratives provided the strongest predictive signal, underscoring the added value of integrating free-text clinical context with structured perioperative data. This expands current understanding of how both system-level workflow factors and narrative information shape PACU recovery.
+
+Strengths of this work include the large, diverse sample size, incorporation of both structured and unstructured perioperative variables, and systematic benchmarking across multiple algorithms. Limitations include reliance on a single health system, absence of external validation, and the exploratory scope of deep learning approaches. Additionally, while explainability methods provide interpretive insights, feature contributions cannot be considered causal.
+
+Future research should validate these models across institutions, assess their integration with real-time perioperative dashboards, and explore hybrid architectures that combine the interpretability of tree-based methods with the representational power of deep learning. Implementation studies evaluating their impact on scheduling, staffing, and patient outcomes will also be essential.
+
+In conclusion, this study demonstrates that gradient-boosted tree models, enriched with operative narrative embeddings, enable accurate and interpretable prediction of PACU recovery time at scale. These findings advance the field by showing how multimodal perioperative data can be leveraged to improve forecasting, support operational decision-making, and enhance the safety and efficiency of postoperative care.
+
+\section*{CRediT authorship contribution statement}
+
+\section*{Declaration of Competing Interest}
+The authors declare that they have no financial or personal interests that could have influenced the research presented in this paper.
+
+\section*{Acknowledgements}
+The authors thank the Academic Medical Organization of Southwestern Ontario (AMOSO)’s Innovation Fund (Grant Number INN23-015) for partial support of this study.
+
+\section*{Funding}
+This work was supported by the Academic Medical Organization of Southwestern Ontario (AMOSO)’s Innovation Fund (Grant Number INN23-015).
+
+\section*{Data Availability}
+The de-identified dataset that supports the findings of this study is not publicly available due to hospital privacy and confidentiality regulations. However, analytical code and preprocessing scripts are available from the corresponding author upon reasonable request to support reproducibility.
+
+\section*{Declaration of generative AI and AI-assisted technologies in the writing process}
+During the preparation of this work the author(s) used ChatGPT (OpenAI) and Claude (Anthropic) to support both text editing (readability and language fluency) and coding tasks (data preprocessing, model development, and visualization). After using these tools, the author(s) carefully reviewed, validated, and edited the outputs as needed, and take(s) full responsibility for the content and integrity of the publication.
+
+
+
+
+\bibliographystyle{unsrt}
+\bibliography{Refs.bib}
+
+\end{document}
