@@ -13,6 +13,7 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-size: 15px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
@@ -30,13 +31,13 @@
         }
 
         header h1 {
-            font-size: 2.5em;
+            font-size: 2.8em;
             margin-bottom: 10px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
 
         header p {
-            font-size: 1.1em;
+            font-size: 1.2em;
             opacity: 0.9;
         }
 
@@ -57,7 +58,7 @@
         .card h2 {
             color: #333;
             margin-bottom: 20px;
-            font-size: 1.5em;
+            font-size: 1.6em;
             border-bottom: 3px solid #667eea;
             padding-bottom: 10px;
         }
@@ -69,7 +70,7 @@
             border: 2px solid #e0e0e0;
             border-radius: 8px;
             font-family: 'Monaco', 'Courier New', monospace;
-            font-size: 13px;
+            font-size: 14px;
             resize: vertical;
             transition: border-color 0.3s;
         }
@@ -110,11 +111,12 @@
             color: #333;
             display: block;
             margin-bottom: 3px;
+            font-size: 1em;
         }
 
         .option-group label span {
             color: #666;
-            font-size: 0.9em;
+            font-size: 0.95em;
         }
 
         button {
@@ -123,7 +125,7 @@
             padding: 12px 30px;
             border: none;
             border-radius: 8px;
-            font-size: 1em;
+            font-size: 1.05em;
             cursor: pointer;
             transition: all 0.3s;
             font-weight: 600;
@@ -186,6 +188,7 @@
             border-bottom: 3px solid transparent;
             cursor: pointer;
             font-weight: 600;
+            font-size: 1em;
             width: auto;
             margin: 0;
             transition: all 0.3s;
@@ -208,7 +211,7 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 15px;
-            font-size: 0.95em;
+            font-size: 0.98em;
         }
 
         .results-table thead {
@@ -237,7 +240,7 @@
             display: inline-block;
             padding: 4px 12px;
             border-radius: 20px;
-            font-size: 0.85em;
+            font-size: 0.88em;
             font-weight: 600;
         }
 
@@ -262,12 +265,38 @@
             border-radius: 8px;
             margin-top: 15px;
             font-family: 'Monaco', 'Courier New', monospace;
-            font-size: 12px;
+            font-size: 13px;
             white-space: pre-wrap;
             word-break: break-word;
             border: 1px solid #e0e0e0;
             max-height: 400px;
             overflow-y: auto;
+            position: relative;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+            width: auto;
+            margin: 0;
+            z-index: 10;
+        }
+
+        .copy-btn:hover {
+            background: #218838;
+        }
+
+        .copy-btn.copied {
+            background: #667eea;
         }
 
         .error {
@@ -309,7 +338,7 @@
         }
 
         .stat-box p {
-            font-size: 0.9em;
+            font-size: 0.95em;
             opacity: 0.9;
         }
 
@@ -339,10 +368,11 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            font-size: 1.05em;
         }
 
         .db-entry-card .entry-meta {
-            font-size: 0.9em;
+            font-size: 0.95em;
             color: #666;
             margin-bottom: 10px;
         }
@@ -354,7 +384,7 @@
         .delete-btn {
             background: #dc3545;
             padding: 6px 12px;
-            font-size: 0.85em;
+            font-size: 0.88em;
             width: auto;
             margin: 0;
         }
@@ -397,7 +427,12 @@
             display: block;
             margin-bottom: 8px;
             font-weight: 600;
+            font-size: 1em;
             color: #333;
+        }
+
+        .file-upload p {
+            font-size: 0.95em;
         }
 
         .file-upload input[type="file"] {
@@ -406,6 +441,7 @@
             border: 1px solid #ddd;
             border-radius: 4px;
             background: white;
+            font-size: 0.95em;
         }
 
         .section-filter {
@@ -420,7 +456,7 @@
             padding: 10px;
             border: 2px solid #e0e0e0;
             border-radius: 8px;
-            font-size: 1em;
+            font-size: 1.05em;
             background: white;
         }
 
@@ -432,6 +468,7 @@
 
         .empty-state h3 {
             color: #666;
+            font-size: 1.3em;
             margin-bottom: 10px;
         }
 
@@ -450,6 +487,7 @@
             border-radius: 8px;
             margin: 15px 0;
             display: none;
+            font-size: 1em;
         }
 
         .message.show {
@@ -467,7 +505,11 @@
             padding: 12px;
             border-radius: 8px;
             margin: 10px 0;
-            font-size: 0.9em;
+            font-size: 0.95em;
+        }
+
+        .mode-selector {
+            font-size: 1em;
         }
     </style>
 </head>
@@ -538,7 +580,7 @@
                             </div>
 
                             <div class="option-group">
-                                <input type="checkbox" id="abbreviateCheckbox" checked>
+                                <input type="checkbox" id="abbreviateCheckbox">
                                 <label for="abbreviateCheckbox">
                                     <strong>📖 Apply Journal Abbreviations</strong>
                                     <span>Use ISO 4 standard abbreviations (e.g., "Energy" → "Ener.")</span>
@@ -546,7 +588,7 @@
                             </div>
 
                             <div class="option-group">
-                                <input type="checkbox" id="protectCheckbox" checked>
+                                <input type="checkbox" id="protectCheckbox">
                                 <label for="protectCheckbox">
                                     <strong>🛡️ Protect Acronyms</strong>
                                     <span>Wrap acronyms in braces to preserve capitalization</span>
@@ -588,7 +630,10 @@
                         </div>
 
                         <div id="bibtex" class="tab-content">
-                            <div id="bibtexPreview" class="bibtex-preview">No results yet</div>
+                            <div style="position: relative;">
+                                <button class="copy-btn" onclick="copyBibTeX()" id="copyButton">📋 Copy</button>
+                                <div id="bibtexPreview" class="bibtex-preview">No results yet</div>
+                            </div>
                         </div>
 
                         <div class="message" id="resultMessage"></div>
@@ -651,9 +696,9 @@
             <div id="help" class="tab-content">
                 <h2>ℹ️ Help & Information</h2>
                 
-                <div style="margin-top: 20px;">
+                <div style="margin-top: 20px; font-size: 1em; line-height: 1.7;">
                     <h3 style="color: #333; margin: 20px 0 10px;">Input Modes</h3>
-                    <dl style="margin-left: 20px; line-height: 1.8;">
+                    <dl style="margin-left: 20px;">
                         <dt style="font-weight: 600; margin-top: 10px;">📝 BibTeX Mode</dt>
                         <dd style="margin-left: 20px; color: #666;">Paste complete BibTeX entries. The system can enrich them with Crossref, apply abbreviations, and protect acronyms.</dd>
                         
@@ -662,18 +707,18 @@
                     </dl>
 
                     <h3 style="color: #333; margin: 20px 0 10px;">LaTeX Manuscript Analysis (NEW!)</h3>
-                    <p style="margin-left: 20px; color: #666; line-height: 1.8;">
+                    <p style="margin-left: 20px; color: #666;">
                         Upload your LaTeX manuscript (.tex file) to enable advanced tracking:
                     </p>
-                    <ul style="margin-left: 40px; color: #666; line-height: 1.8;">
+                    <ul style="margin-left: 40px; color: #666;">
                         <li><strong>Citation Frequency:</strong> How many times each reference is cited</li>
                         <li><strong>Section Tracking:</strong> Which sections cite each reference</li>
                         <li><strong>Section Filtering:</strong> View references by specific section (Introduction, Methods, etc.)</li>
                     </ul>
-                    <p style="margin-left: 20px; color: #666; line-height: 1.8; margin-top: 10px;">
+                    <p style="margin-left: 20px; color: #666; margin-top: 10px;">
                         Example LaTeX structure:
                     </p>
-                    <pre style="margin-left: 40px; background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto;">
+                    <pre style="margin-left: 40px; background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; font-size: 0.95em;">
 \section{Introduction}
 Text here \cite{reference_1} more text \cite{reference_2} 
 and again \cite{reference_1}
@@ -681,15 +726,15 @@ and again \cite{reference_1}
 \section{Methods}
 Description \cite{reference_3} and \cite{reference_1}
                     </pre>
-                    <p style="margin-left: 20px; color: #666; line-height: 1.8;">
+                    <p style="margin-left: 20px; color: #666;">
                         Results in: reference_1 appears in Introduction (2×) and Methods (1×)
                     </p>
                     
                     <h3 style="color: #333; margin: 20px 0 10px;">Journal Abbreviations</h3>
-                    <p style="margin-left: 20px; color: #666; line-height: 1.8;">
+                    <p style="margin-left: 20px; color: #666;">
                         The system uses <strong>ISO 4 standard abbreviations with periods</strong>:
                     </p>
-                    <ul style="margin-left: 40px; color: #666; line-height: 1.8;">
+                    <ul style="margin-left: 40px; color: #666;">
                         <li>"Energy" → "Ener."</li>
                         <li>"Applied Energy" → "Appl. Ener."</li>
                         <li>"Journal of Energy" → "J. of Ener."</li>
@@ -887,13 +932,11 @@ Natural language processing techniques`;
             tableHtml += '</tbody></table>';
             resultsTable.innerHTML = tableHtml;
 
+            // BibTeX preview - use Final_BibTeX from backend (respects abbreviate/protect settings)
             let bibtexText = '';
-            const displayFullData = data.full_data.slice(0, previewLimit);
+            const displayFullData = data.data.slice(0, previewLimit);
             displayFullData.forEach(row => {
-                const bibField = document.getElementById('protectCheckbox').checked ? 
-                    'Crossref_BibTeX_Protected' : 
-                    'Crossref_BibTeX_Abbrev';
-                bibtexText += (row[bibField] || row.BibTeX) + '\n\n';
+                bibtexText += (row.Final_BibTeX || row.BibTeX || '') + '\n\n';
             });
             
             if (hasMore) {
@@ -901,6 +944,24 @@ Natural language processing techniques`;
             }
             
             bibtexPreview.textContent = bibtexText;
+        }
+
+        function copyBibTeX() {
+            const bibtexText = document.getElementById('bibtexPreview').textContent;
+            const button = document.getElementById('copyButton');
+            
+            navigator.clipboard.writeText(bibtexText).then(() => {
+                button.textContent = '✅ Copied!';
+                button.classList.add('copied');
+                
+                setTimeout(() => {
+                    button.textContent = '📋 Copy';
+                    button.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                alert('Failed to copy to clipboard');
+            });
         }
 
         async function loadDatabaseEntries() {
