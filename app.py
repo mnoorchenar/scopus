@@ -3,10 +3,11 @@ Flask Application for Reference Management Pipeline
 Complete implementation matching overleaf.py functionality
 Includes LaTeX citation parsing, BibTeX processing, and full pipeline
 
-UPDATES:
+FEATURES:
 - Fixed abbreviations to include periods (ISO 4 standard): "Energy" → "Ener."
-- Added endpoint to clear entire database
-- Better abbreviation rules for journal names
+- LaTeX manuscript analysis for citation frequency and section tracking
+- Filter references by section
+- Clear entire database
 """
 
 from flask import Flask, render_template, request, jsonify, send_file
@@ -78,7 +79,7 @@ def check_api_key():
 # =====================================================================
 
 def parse_citations_from_tex(tex_content: str) -> pd.DataFrame:
-    """Parse citations from LaTeX content"""
+    """Parse citations from LaTeX content with section tracking"""
     print("📖 Parsing citations from LaTeX")
     
     lines = tex_content.split('\n')
@@ -559,20 +560,30 @@ def index():
 
 @app.route('/api/process', methods=['POST'])
 def process_bibtex():
-    """Process BibTeX content (text input - original functionality)"""
+    """Process BibTeX content with optional LaTeX analysis"""
     if not check_api_key():
         return jsonify({'error': 'Unauthorized'}), 401
     
     try:
-        data = request.get_json()
-        
-        # Handle both 'bibtex' and 'bibtex_content' field names (for HTML compatibility)
-        bibtex_content = data.get('bibtex_content') or data.get('bibtex', '')
-        input_mode = data.get('input_mode', 'bibtex')
-        enrich = data.get('enrich', False)
-        abbreviate = data.get('abbreviate', False)
-        protect = data.get('protect', False)
-        save_to_db = data.get('save_to_db', False)
+        # Handle both JSON and FormData
+        if request.is_json:
+            data = request.get_json()
+            bibtex_content = data.get('bibtex_content') or data.get('bibtex', '')
+            input_mode = data.get('input_mode', 'bibtex')
+            enrich = data.get('enrich', False)
+            abbreviate = data.get('abbreviate', False)
+            protect = data.get('protect', False)
+            save_to_db = data.get('save_to_db', False)
+            latex_file = None
+        else:
+            # FormData from file upload
+            bibtex_content = request.form.get('bibtex_content', '')
+            input_mode = request.form.get('input_mode', 'bibtex')
+            enrich = request.form.get('enrich', 'false').lower() == 'true'
+            abbreviate = request.form.get('abbreviate', 'false').lower() == 'true'
+            protect = request.form.get('protect', 'false').lower() == 'true'
+            save_to_db = request.form.get('save_to_db', 'false').lower() == 'true'
+            latex_file = request.files.get('latex_file')
         
         print(f"📥 Received: {len(bibtex_content)} chars, mode={input_mode}")
         
@@ -589,14 +600,12 @@ def process_bibtex():
             for i, title in enumerate(titles, 1):
                 print(f"  [{i}/{len(titles)}] Searching: {title[:50]}...")
                 try:
-                    # Search Crossref
                     url = f"https://api.crossref.org/works?query.bibliographic={requests.utils.quote(title)}&rows=1"
                     response = HTTP.get(url, timeout=15)
                     items = response.json().get("message", {}).get("items", [])
                     
                     if items and items[0].get('DOI'):
                         doi = items[0]['DOI']
-                        # Fetch BibTeX
                         bibtex_r = HTTP.get(
                             f"https://doi.org/{doi}",
                             headers={"Accept": "application/x-bibtex"},
@@ -610,21 +619,38 @@ def process_bibtex():
                 except Exception as e:
                     print(f"    ⚠️ Failed: {e}")
             
-            # Join all found entries
             bibtex_content = '\n\n'.join(bibtex_entries)
             print(f"✅ Retrieved {len(bibtex_entries)} BibTeX entries from titles")
             
             if not bibtex_content:
                 return jsonify({'error': 'No BibTeX entries found for the provided titles'}), 400
         
-        # Normal BibTeX mode validation
         if not bibtex_content or len(bibtex_content.strip()) == 0:
             return jsonify({'error': 'No BibTeX content provided'}), 400
         
+        # Parse BibTeX
         df = parse_bibtex_input(bibtex_content)
         
         if df.empty:
             return jsonify({'error': 'No valid BibTeX entries found'}), 400
+        
+        # Parse LaTeX file if provided
+        latex_analyzed = False
+        citations_found = 0
+        if latex_file:
+            print("📄 LaTeX file provided, analyzing...")
+            try:
+                latex_content = latex_file.read().decode('utf-8')
+                citations_df = parse_citations_from_tex(latex_content)
+                citations_found = len(citations_df)
+                
+                # Merge LaTeX citation data with BibTeX data
+                df = merge_citations_with_bib(citations_df, df)
+                df.insert(0, "Index", range(1, len(df) + 1))
+                latex_analyzed = True
+                print(f"✅ LaTeX analyzed: {citations_found} citations found")
+            except Exception as e:
+                print(f"⚠️ LaTeX analysis failed: {e}")
         
         # Enrich if requested
         if enrich:
@@ -646,119 +672,7 @@ def process_bibtex():
             for _, row in df.iterrows():
                 doi = row.get('DOI', '').strip()
                 year_int = extract_year_int(row.get('Year', ''))
-                
-                try:
-                    cursor.execute('''
-                        INSERT OR REPLACE INTO bibliography 
-                        (session_id, key, doi, type, authors, title, journal_booktitle, year, year_int,
-                         publisher, volume, pages, bibtex, crossref_bibtex, crossref_bibtex_localkey,
-                         title_similarity, journal_abbreviation, crossref_bibtex_abbrev, 
-                         crossref_bibtex_protected, imported_date)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ''', (
-                        session_id, row['Key'], doi, row['Type'], row['Authors'],
-                        row['Title'], row['Journal/Booktitle'], row['Year'], year_int,
-                        row['Publisher'], row.get('Volume', ''), row.get('Pages', ''),
-                        row['BibTeX'], row.get('Crossref_BibTeX', row['BibTeX']),
-                        row.get('Crossref_BibTeX_LocalKey', row['BibTeX']),
-                        row.get('Title_Similarity', 0), row.get('Journal_Abbreviation', ''),
-                        row.get('Crossref_BibTeX_Abbrev', row['BibTeX']),
-                        row.get('Crossref_BibTeX_Protected', row['BibTeX']),
-                        row.get('Imported_Date', datetime.now().isoformat())
-                    ))
-                except sqlite3.IntegrityError as e:
-                    print(f"⚠️ DB insert failed for {row['Key']}: {e}")
-            
-            conn.commit()
-            db_id = session_id
-            conn.close()
-
-        # Determine final BibTeX column
-        if protect:
-            final_bibtex_col = 'Crossref_BibTeX_Protected'
-        elif abbreviate:
-            final_bibtex_col = 'Crossref_BibTeX_Abbrev'
-        else:
-            final_bibtex_col = 'Crossref_BibTeX_LocalKey'
-        
-        response_df = df[[
-            'Key', 'Type', 'Authors', 'Title', 'Journal/Booktitle', 'Year',
-            final_bibtex_col
-        ]].copy()
-        
-        response_df.columns = [
-            'Key', 'Type', 'Authors', 'Title', 'Journal/Booktitle', 'Year', 'Final_BibTeX'
-        ]
-
-        return jsonify({
-            'success': True,
-            'count': len(df),
-            'db_id': db_id,
-            'data': response_df.to_dict(orient='records'),
-            'full_data': df.to_dict(orient='records')
-        })
-
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/process-latex', methods=['POST'])
-def process_latex():
-    """Process LaTeX + BibTeX files (full overleaf.py pipeline)"""
-    if not check_api_key():
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    try:
-        # Get files from form data
-        if 'tex_file' not in request.files or 'bib_file' not in request.files:
-            return jsonify({'error': 'Both tex_file and bib_file are required'}), 400
-        
-        tex_file = request.files['tex_file']
-        bib_file = request.files['bib_file']
-        
-        if tex_file.filename == '' or bib_file.filename == '':
-            return jsonify({'error': 'Both files must be provided'}), 400
-        
-        # Read file contents
-        tex_content = tex_file.read().decode('utf-8')
-        bib_content = bib_file.read().decode('utf-8')
-        
-        # Get options
-        enrich = request.form.get('enrich', 'false').lower() == 'true'
-        save_to_db = request.form.get('save_to_db', 'false').lower() == 'true'
-        
-        # Parse LaTeX citations
-        citations_df = parse_citations_from_tex(tex_content)
-        
-        # Parse BibTeX
-        bib_df = parse_bibtex_input(bib_content)
-        
-        # Merge
-        merged_df = merge_citations_with_bib(citations_df, bib_df)
-        merged_df.insert(0, "Index", range(1, len(merged_df) + 1))
-        
-        # Enrich if requested
-        if enrich:
-            merged_df = enrich_with_crossref(merged_df)
-        else:
-            merged_df['Crossref_BibTeX'] = merged_df['BibTeX']
-            merged_df['Title_Similarity'] = 0
-        
-        # Add abbreviations and create all versions
-        merged_df = add_journal_abbreviations(merged_df)
-        
-        # Save to database if requested
-        db_id = None
-        if save_to_db:
-            conn = get_db_connection()
-            cursor = conn.cursor()
-            session_id = datetime.now().isoformat()
-            
-            for _, row in merged_df.iterrows():
-                doi = row.get('DOI', '').strip()
-                year_int = extract_year_int(row.get('Year', ''))
-                key_val = row.get('Reference') or row.get('Key', f"ref_{row.get('Index', 0)}")
+                key_val = row.get('Reference') or row.get('Key', f"ref_{row.name}")
                 
                 try:
                     cursor.execute('''
@@ -770,7 +684,7 @@ def process_latex():
                          imported_date)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ''', (
-                        row.get('Index'), session_id, row.get('Reference', ''),
+                        row.get('Index'), session_id, row.get('Reference', key_val),
                         row.get('Frequency', 0), row.get('Sections', ''),
                         key_val, doi, row.get('Type', ''), row.get('Authors', ''),
                         row.get('Title', ''), row.get('Journal/Booktitle', ''),
@@ -784,89 +698,119 @@ def process_latex():
                         datetime.now().isoformat()
                     ))
                 except sqlite3.IntegrityError as e:
-                    print(f"⚠️ DB insert failed: {e}")
+                    print(f"⚠️ DB insert failed for {key_val}: {e}")
             
             conn.commit()
             db_id = session_id
             conn.close()
+
+        # Determine final BibTeX column
+        if protect:
+            final_bibtex_col = 'Crossref_BibTeX_Protected'
+        elif abbreviate:
+            final_bibtex_col = 'Crossref_BibTeX_Abbrev'
+        else:
+            final_bibtex_col = 'Crossref_BibTeX_LocalKey'
         
+        # Prepare response columns
+        response_cols = ['Key', 'Type', 'Authors', 'Title', 'Journal/Booktitle', 'Year', final_bibtex_col]
+        if latex_analyzed:
+            response_cols.insert(6, 'Frequency')
+            response_cols.insert(7, 'Sections')
+        
+        response_df = df[[col for col in response_cols if col in df.columns]].copy()
+        response_df.columns = list(response_df.columns[:-1]) + ['Final_BibTeX']
+
         return jsonify({
             'success': True,
-            'count': len(merged_df),
+            'count': len(df),
             'db_id': db_id,
-            'citations_found': len(citations_df),
-            'data': merged_df.to_dict(orient='records')
+            'latex_analyzed': latex_analyzed,
+            'citations_found': citations_found,
+            'data': response_df.to_dict(orient='records'),
+            'full_data': df.to_dict(orient='records')
         })
-        
+
     except Exception as e:
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/process-bib-only', methods=['POST'])
-def process_bib_only():
-    """Process only BibTeX file (Mode 1 from overleaf.py)"""
-    if not check_api_key():
-        return jsonify({'error': 'Unauthorized'}), 401
-    
+@app.route('/api/sections/list', methods=['GET'])
+def list_sections():
+    """Get list of all unique sections from database"""
     try:
-        if 'bib_file' not in request.files:
-            return jsonify({'error': 'bib_file is required'}), 400
+        conn = get_db_connection()
+        cursor = conn.cursor()
         
-        bib_file = request.files['bib_file']
+        cursor.execute('SELECT DISTINCT sections FROM bibliography WHERE sections IS NOT NULL AND sections != ""')
+        rows = cursor.fetchall()
+        conn.close()
         
-        if bib_file.filename == '':
-            return jsonify({'error': 'File must be provided'}), 400
+        # Parse and deduplicate sections
+        all_sections = set()
+        for row in rows:
+            if row[0]:
+                sections = [s.strip() for s in row[0].split(',')]
+                all_sections.update(sections)
         
-        bib_content = bib_file.read().decode('utf-8')
-        save_to_db = request.form.get('save_to_db', 'false').lower() == 'true'
-        
-        # Parse BibTeX
-        df = parse_bibtex_input(bib_content)
-        
-        # Add "Used" column (empty by default)
-        df["Used"] = None
-        
-        # Save to database if requested
-        db_id = None
-        if save_to_db:
-            conn = get_db_connection()
-            cursor = conn.cursor()
-            session_id = datetime.now().isoformat()
-            
-            for _, row in df.iterrows():
-                doi = row.get('DOI', '').strip()
-                year_int = extract_year_int(row.get('Year', ''))
-                
-                try:
-                    cursor.execute('''
-                        INSERT OR REPLACE INTO bibliography 
-                        (session_id, key, doi, type, authors, title, journal_booktitle, 
-                         year, year_int, publisher, volume, pages, bibtex, used, imported_date)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ''', (
-                        session_id, row['Key'], doi, row['Type'], row['Authors'],
-                        row['Title'], row['Journal/Booktitle'], row['Year'], year_int,
-                        row['Publisher'], row.get('Volume', ''), row.get('Pages', ''),
-                        row['BibTeX'], row.get('Used'), datetime.now().isoformat()
-                    ))
-                except sqlite3.IntegrityError as e:
-                    print(f"⚠️ DB insert failed: {e}")
-            
-            conn.commit()
-            db_id = session_id
-            conn.close()
+        sections_list = sorted(list(all_sections))
         
         return jsonify({
             'success': True,
-            'count': len(df),
-            'db_id': db_id,
-            'data': df.to_dict(orient='records')
+            'sections': sections_list
         })
-        
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/sections/references', methods=['GET'])
+def get_references_by_section():
+    """Get all references for a specific section"""
+    section = request.args.get('section', '')
+    
+    if not section:
+        return jsonify({'error': 'Section parameter required'}), 400
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Find all references that contain this section
+        cursor.execute('''
+            SELECT key, title, authors, year, frequency, sections, reference
+            FROM bibliography 
+            WHERE sections LIKE ?
+        ''', (f'%{section}%',))
+        
+        rows = cursor.fetchall()
+        conn.close()
+        
+        references = []
+        for row in rows:
+            # Calculate frequency in this specific section
+            sections_list = [s.strip() for s in row[5].split(',') if s.strip()]
+            if section in sections_list:
+                # Count occurrences in this section (simplified - assumes equal distribution)
+                total_freq = row[4] or 0
+                num_sections = len(sections_list)
+                freq_in_section = total_freq // num_sections if num_sections > 0 else total_freq
+                
+                references.append({
+                    'key': row[0],
+                    'title': row[1],
+                    'authors': row[2],
+                    'year': row[3],
+                    'frequency_in_section': freq_in_section,
+                    'total_frequency': total_freq,
+                    'all_sections': row[5]
+                })
+        
+        return jsonify({
+            'success': True,
+            'section': section,
+            'references': references
+        })
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/database/entries', methods=['GET'])
@@ -920,11 +864,9 @@ def clear_database():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Delete all entries
         cursor.execute('DELETE FROM bibliography')
         deleted_count = cursor.rowcount
         
-        # Reset the auto-increment counter
         cursor.execute('DELETE FROM sqlite_sequence WHERE name="bibliography"')
         
         conn.commit()

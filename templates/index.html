@@ -251,6 +251,11 @@
             color: #0c5460;
         }
 
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
         .bibtex-preview {
             background: #f5f5f5;
             padding: 15px;
@@ -380,6 +385,56 @@
             background: #c82333;
         }
 
+        .file-upload {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            border: 2px dashed #ddd;
+        }
+
+        .file-upload label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .file-upload input[type="file"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+        }
+
+        .section-filter {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+
+        .section-filter select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            background: white;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state h3 {
+            color: #666;
+            margin-bottom: 10px;
+        }
+
         @media (max-width: 1024px) {
             .main-grid {
                 grid-template-columns: 1fr;
@@ -404,6 +459,16 @@
         .hidden {
             display: none;
         }
+
+        .info-box {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
@@ -416,43 +481,14 @@
         <!-- Main Tabs -->
         <div class="card">
             <div class="tabs">
-                <button class="tab-button active" onclick="switchMainTab('database')">💾 Database</button>
-                <button class="tab-button" onclick="switchMainTab('process')">🔄 Process References</button>
+                <button class="tab-button active" onclick="switchMainTab('process')">🔄 Process References</button>
+                <button class="tab-button" onclick="switchMainTab('database')">💾 Database</button>
+                <button class="tab-button" onclick="switchMainTab('sections')">📑 Select by Section</button>
                 <button class="tab-button" onclick="switchMainTab('help')">ℹ️ Help & Info</button>
             </div>
 
-            <!-- Database Tab (Default) -->
-            <div id="database" class="tab-content active">
-                <h2>💾 Database Management</h2>
-                
-                <div class="stats-grid" id="statsContainer" style="margin-top: 20px;">
-                    <div class="stat-box">
-                        <h3 id="statTotal">0</h3>
-                        <p>Total Entries</p>
-                    </div>
-                    <div class="stat-box">
-                        <h3 id="statTypes">0</h3>
-                        <p>Entry Types</p>
-                    </div>
-                    <div class="stat-box">
-                        <h3 id="statYears">0</h3>
-                        <p>Unique Years</p>
-                    </div>
-                </div>
-
-                <div class="action-buttons">
-                    <button class="export-btn" onclick="loadDatabaseEntries()">🔄 Refresh</button>
-                    <button class="export-btn" onclick="exportCSV()">📥 Export CSV</button>
-                    <button class="export-btn" onclick="exportBibTeX()">📥 Export BibTeX</button>
-                    <button class="export-btn" onclick="downloadDatabase()">💾 Download Database</button>
-                    <button class="clear-db-btn" onclick="clearDatabase()">🗑️ Clear Entire Database</button>
-                </div>
-
-                <div id="databaseEntries"></div>
-            </div>
-
-            <!-- Process References Tab -->
-            <div id="process" class="tab-content">
+            <!-- Process References Tab (Default) -->
+            <div id="process" class="tab-content active">
                 <div class="main-grid">
                     <!-- Input Panel -->
                     <div>
@@ -480,6 +516,15 @@
   journal = {Journal Name},
   year = {2024}
 }"></textarea>
+
+                        <!-- Optional LaTeX File Upload -->
+                        <div class="file-upload">
+                            <label>📄 LaTeX Manuscript (Optional)</label>
+                            <p style="color: #666; font-size: 0.9em; margin-bottom: 8px;">
+                                Upload your .tex file to track citation frequency and sections
+                            </p>
+                            <input type="file" id="latexFile" accept=".tex" />
+                        </div>
 
                         <div class="options">
                             <h3 style="color: #333; margin-bottom: 15px; font-size: 1.1em;">Processing Options</h3>
@@ -551,6 +596,57 @@
                 </div>
             </div>
 
+            <!-- Database Tab -->
+            <div id="database" class="tab-content">
+                <h2>💾 Database Management</h2>
+                
+                <div class="stats-grid" id="statsContainer" style="margin-top: 20px;">
+                    <div class="stat-box">
+                        <h3 id="statTotal">0</h3>
+                        <p>Total Entries</p>
+                    </div>
+                    <div class="stat-box">
+                        <h3 id="statTypes">0</h3>
+                        <p>Entry Types</p>
+                    </div>
+                    <div class="stat-box">
+                        <h3 id="statYears">0</h3>
+                        <p>Unique Years</p>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="export-btn" onclick="loadDatabaseEntries()">🔄 Refresh</button>
+                    <button class="export-btn" onclick="exportCSV()">📥 Export CSV</button>
+                    <button class="export-btn" onclick="exportBibTeX()">📥 Export BibTeX</button>
+                    <button class="export-btn" onclick="downloadDatabase()">💾 Download Database</button>
+                    <button class="clear-db-btn" onclick="clearDatabase()">🗑️ Clear Entire Database</button>
+                </div>
+
+                <div id="databaseEntries"></div>
+            </div>
+
+            <!-- Select by Section Tab -->
+            <div id="sections" class="tab-content">
+                <h2>📑 Select References by Section</h2>
+                
+                <div class="info-box">
+                    <strong>ℹ️ Note:</strong> This feature requires uploading a LaTeX manuscript (.tex file) when processing references.
+                    It shows which references appear in which sections and their citation frequency.
+                </div>
+
+                <div class="section-filter">
+                    <label style="font-weight: 600; color: #333; margin-bottom: 8px; display: block;">
+                        Filter by Section:
+                    </label>
+                    <select id="sectionSelect" onchange="filterBySection()">
+                        <option value="">Loading sections...</option>
+                    </select>
+                </div>
+
+                <div id="sectionResults"></div>
+            </div>
+
             <!-- Help Content -->
             <div id="help" class="tab-content">
                 <h2>ℹ️ Help & Information</h2>
@@ -562,12 +658,36 @@
                         <dd style="margin-left: 20px; color: #666;">Paste complete BibTeX entries. The system can enrich them with Crossref, apply abbreviations, and protect acronyms.</dd>
                         
                         <dt style="font-weight: 600; margin-top: 10px;">🔍 Title Mode</dt>
-                        <dd style="margin-left: 20px; color: #666;">Paste only paper titles (one per line). The system automatically searches Crossref and retrieves complete BibTeX entries for each title. Perfect when you have a list of paper titles and need full references!</dd>
+                        <dd style="margin-left: 20px; color: #666;">Paste only paper titles (one per line). The system automatically searches Crossref and retrieves complete BibTeX entries for each title.</dd>
                     </dl>
-                    
-                    <h3 style="color: #333; margin: 20px 0 10px;">Journal Abbreviations (NEW!)</h3>
+
+                    <h3 style="color: #333; margin: 20px 0 10px;">LaTeX Manuscript Analysis (NEW!)</h3>
                     <p style="margin-left: 20px; color: #666; line-height: 1.8;">
-                        The system now uses <strong>ISO 4 standard abbreviations with periods</strong>:
+                        Upload your LaTeX manuscript (.tex file) to enable advanced tracking:
+                    </p>
+                    <ul style="margin-left: 40px; color: #666; line-height: 1.8;">
+                        <li><strong>Citation Frequency:</strong> How many times each reference is cited</li>
+                        <li><strong>Section Tracking:</strong> Which sections cite each reference</li>
+                        <li><strong>Section Filtering:</strong> View references by specific section (Introduction, Methods, etc.)</li>
+                    </ul>
+                    <p style="margin-left: 20px; color: #666; line-height: 1.8; margin-top: 10px;">
+                        Example LaTeX structure:
+                    </p>
+                    <pre style="margin-left: 40px; background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto;">
+\section{Introduction}
+Text here \cite{reference_1} more text \cite{reference_2} 
+and again \cite{reference_1}
+
+\section{Methods}
+Description \cite{reference_3} and \cite{reference_1}
+                    </pre>
+                    <p style="margin-left: 20px; color: #666; line-height: 1.8;">
+                        Results in: reference_1 appears in Introduction (2×) and Methods (1×)
+                    </p>
+                    
+                    <h3 style="color: #333; margin: 20px 0 10px;">Journal Abbreviations</h3>
+                    <p style="margin-left: 20px; color: #666; line-height: 1.8;">
+                        The system uses <strong>ISO 4 standard abbreviations with periods</strong>:
                     </p>
                     <ul style="margin-left: 40px; color: #666; line-height: 1.8;">
                         <li>"Energy" → "Ener."</li>
@@ -576,46 +696,20 @@
                         <li>"IEEE Transactions on Neural Networks" → "IEEE Trans. on Neural Netw."</li>
                     </ul>
                     
-                    <h3 style="color: #333; margin: 20px 0 10px;">How to Use</h3>
-                    <ol style="line-height: 1.8; margin-left: 20px;">
-                        <li><strong>Database Tab (Default):</strong> View and manage your saved references</li>
-                        <li><strong>Process Tab:</strong> Add new references
-                            <ul style="margin-left: 20px;">
-                                <li>Choose BibTeX Mode or Title Mode</li>
-                                <li>Paste your content</li>
-                                <li>Select processing options</li>
-                                <li>Click "Process References"</li>
-                            </ul>
-                        </li>
-                        <li><strong>Clear Database:</strong> Use the red "Clear Entire Database" button to remove all entries and start fresh</li>
-                    </ol>
-
-                    <h3 style="color: #333; margin: 20px 0 10px;">Processing Options Explained</h3>
+                    <h3 style="color: #333; margin: 20px 0 10px;">Tab Overview</h3>
                     <dl style="margin-left: 20px;">
-                        <dt style="font-weight: 600; margin-top: 10px;">🌐 Enrich with Crossref</dt>
-                        <dd style="margin-left: 20px; color: #666;">Queries Crossref API to fetch updated metadata and BibTeX. Takes 3-5 seconds per entry.</dd>
+                        <dt style="font-weight: 600; margin-top: 10px;">🔄 Process References (Tab 1)</dt>
+                        <dd style="margin-left: 20px; color: #666;">Add new references via BibTeX or titles. Optionally upload LaTeX manuscript for section tracking.</dd>
                         
-                        <dt style="font-weight: 600; margin-top: 10px;">📖 Journal Abbreviations</dt>
-                        <dd style="margin-left: 20px; color: #666;">Replaces full journal names with ISO 4 standard abbreviations with periods.</dd>
+                        <dt style="font-weight: 600; margin-top: 10px;">💾 Database (Tab 2)</dt>
+                        <dd style="margin-left: 20px; color: #666;">View all saved references, export data, or clear database.</dd>
                         
-                        <dt style="font-weight: 600; margin-top: 10px;">🛡️ Protect Acronyms</dt>
-                        <dd style="margin-left: 20px; color: #666;">Wraps acronyms and multi-letter words in braces to preserve capitalization in LaTeX.</dd>
+                        <dt style="font-weight: 600; margin-top: 10px;">📑 Select by Section (Tab 3)</dt>
+                        <dd style="margin-left: 20px; color: #666;">Filter references by LaTeX section. Only available if LaTeX manuscript was uploaded.</dd>
                         
-                        <dt style="font-weight: 600; margin-top: 10px;">💾 Save to Database</dt>
-                        <dd style="margin-left: 20px; color: #666;">Stores all versions (original, enriched, abbreviated, protected) for future use.</dd>
+                        <dt style="font-weight: 600; margin-top: 10px;">ℹ️ Help & Info (Tab 4)</dt>
+                        <dd style="margin-left: 20px; color: #666;">Documentation and usage guide.</dd>
                     </dl>
-
-                    <h3 style="color: #333; margin: 20px 0 10px;">Data Storage</h3>
-                    <p style="margin-left: 20px; color: #666;">
-                        All data is stored in <code>refs_management.db</code> (SQLite). The database includes:
-                    </p>
-                    <ul style="margin-left: 20px;">
-                        <li>Original BibTeX</li>
-                        <li>Enriched metadata from Crossref</li>
-                        <li>Journal abbreviations with periods (ISO 4)</li>
-                        <li>Acronym-protected versions</li>
-                        <li>Timestamps and session info</li>
-                    </ul>
                 </div>
             </div>
         </div>
@@ -623,16 +717,17 @@
 
     <script>
         let lastResults = null;
+        let availableSections = [];
 
         function switchTab(tabName) {
-            // Switch between Preview and BibTeX in results
             const parent = event.target.closest('.card') || document;
             parent.querySelectorAll('.tab-content').forEach(el => {
-                if (el.id === 'database' || el.id === 'process' || el.id === 'help') return;
+                if (el.id === 'database' || el.id === 'process' || el.id === 'help' || el.id === 'sections') return;
                 el.classList.remove('active');
             });
             parent.querySelectorAll('.tab-button').forEach(el => {
-                if (el.textContent.includes('Database') || el.textContent.includes('Process') || el.textContent.includes('Help')) return;
+                if (el.textContent.includes('Database') || el.textContent.includes('Process') || 
+                    el.textContent.includes('Help') || el.textContent.includes('Section')) return;
                 el.classList.remove('active');
             });
             
@@ -641,7 +736,7 @@
         }
 
         function switchMainTab(tabName) {
-            document.querySelectorAll('#database, #process, #help').forEach(el => {
+            document.querySelectorAll('#database, #process, #help, #sections').forEach(el => {
                 el.classList.remove('active');
             });
             document.querySelectorAll('.tabs > .tab-button').forEach(el => {
@@ -654,6 +749,8 @@
             if (tabName === 'database') {
                 loadDatabaseEntries();
                 loadStats();
+            } else if (tabName === 'sections') {
+                loadSections();
             }
         }
 
@@ -690,6 +787,7 @@ Natural language processing techniques`;
 
         async function processReferences() {
             const bibtexContent = document.getElementById('bibtexInput').value;
+            const latexFile = document.getElementById('latexFile').files[0];
             const inputMode = document.querySelector('input[name="inputMode"]:checked').value;
             const loading = document.getElementById('loadingIndicator');
             const message = document.getElementById('inputMessage');
@@ -704,19 +802,21 @@ Natural language processing techniques`;
             message.style.display = 'none';
 
             try {
+                const formData = new FormData();
+                formData.append('bibtex_content', bibtexContent);
+                formData.append('input_mode', inputMode);
+                formData.append('enrich', document.getElementById('enrichCheckbox').checked);
+                formData.append('abbreviate', document.getElementById('abbreviateCheckbox').checked);
+                formData.append('protect', document.getElementById('protectCheckbox').checked);
+                formData.append('save_to_db', document.getElementById('saveDbCheckbox').checked);
+                
+                if (latexFile) {
+                    formData.append('latex_file', latexFile);
+                }
+
                 const response = await fetch('/api/process', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        bibtex_content: bibtexContent,
-                        input_mode: inputMode,
-                        enrich: document.getElementById('enrichCheckbox').checked,
-                        abbreviate: document.getElementById('abbreviateCheckbox').checked,
-                        protect: document.getElementById('protectCheckbox').checked,
-                        save_to_db: document.getElementById('saveDbCheckbox').checked
-                    })
+                    body: formData
                 });
 
                 const data = await response.json();
@@ -725,9 +825,12 @@ Natural language processing techniques`;
                 if (data.success) {
                     lastResults = data;
                     displayResults(data);
-                    showMessage(message, 
-                        `✅ Successfully processed ${data.count} references${data.db_id ? ' and saved to database' : ''}`, 
-                        'success');
+                    
+                    let msg = `✅ Successfully processed ${data.count} references`;
+                    if (data.db_id) msg += ' and saved to database';
+                    if (data.latex_analyzed) msg += ` (LaTeX analysis: ${data.citations_found} citations found)`;
+                    
+                    showMessage(message, msg, 'success');
                     
                     if (data.db_id) {
                         loadDatabaseEntries();
@@ -754,6 +857,9 @@ Natural language processing techniques`;
 
             let tableHtml = '<table class="results-table"><thead><tr>';
             const columns = ['Key', 'Type', 'Authors', 'Title', 'Year'];
+            if (data.latex_analyzed) {
+                columns.push('Frequency', 'Sections');
+            }
             columns.forEach(col => {
                 tableHtml += `<th>${col}</th>`;
             });
@@ -767,11 +873,15 @@ Natural language processing techniques`;
                 tableHtml += `<td>${row.Authors.substring(0, 50)}${row.Authors.length > 50 ? '...' : ''}</td>`;
                 tableHtml += `<td>${row.Title.substring(0, 50)}${row.Title.length > 50 ? '...' : ''}</td>`;
                 tableHtml += `<td>${row.Year}</td>`;
+                if (data.latex_analyzed) {
+                    tableHtml += `<td><span class="badge badge-warning">${row.Frequency || 0}×</span></td>`;
+                    tableHtml += `<td style="font-size: 0.85em;">${row.Sections || '-'}</td>`;
+                }
                 tableHtml += '</tr>';
             });
 
             if (hasMore) {
-                tableHtml += `<tr><td colspan="5" style="text-align: center; padding: 20px; color: #666; font-style: italic;">... and ${data.count - previewLimit} more references (check Database tab or export to see all)</td></tr>`;
+                tableHtml += `<tr><td colspan="${columns.length}" style="text-align: center; padding: 20px; color: #666; font-style: italic;">... and ${data.count - previewLimit} more references (check Database tab or export to see all)</td></tr>`;
             }
 
             tableHtml += '</tbody></table>';
@@ -801,7 +911,7 @@ Natural language processing techniques`;
                 const container = document.getElementById('databaseEntries');
                 
                 if (data.count === 0) {
-                    container.innerHTML = '<p style="color: #999; text-align: center; padding: 40px;">No entries in database yet</p>';
+                    container.innerHTML = '<div class="empty-state"><h3>No entries in database yet</h3><p>Process some references to get started</p></div>';
                     return;
                 }
 
@@ -814,16 +924,20 @@ Natural language processing techniques`;
                 }
                 
                 data.entries.slice(0, previewLimit).forEach(entry => {
+                    const freqBadge = entry.frequency ? `<span class="badge badge-warning">${entry.frequency}× cited</span>` : '';
+                    const sectionInfo = entry.sections ? `<br><strong>Sections:</strong> ${entry.sections}` : '';
+                    
                     html += `
                         <div class="db-entry-card">
                             <h4>
-                                <span>${entry.key} <span class="badge badge-info">${entry.type}</span></span>
+                                <span>${entry.key} <span class="badge badge-info">${entry.type}</span> ${freqBadge}</span>
                                 <button class="delete-btn" onclick="deleteEntry('${entry.key}')">Delete</button>
                             </h4>
                             <div class="entry-meta">
                                 <span><strong>Title:</strong> ${entry.title.substring(0, 80)}${entry.title.length > 80 ? '...' : ''}</span>
                                 <span><strong>Year:</strong> ${entry.year || 'N/A'}</span>
                                 <span><strong>Added:</strong> ${new Date(entry.created_at).toLocaleDateString()}</span>
+                                ${sectionInfo}
                             </div>
                         </div>
                     `;
@@ -832,6 +946,74 @@ Natural language processing techniques`;
                 container.innerHTML = html;
             } catch (error) {
                 console.error('Error loading database:', error);
+            }
+        }
+
+        async function loadSections() {
+            try {
+                const response = await fetch('/api/sections/list');
+                const data = await response.json();
+
+                const select = document.getElementById('sectionSelect');
+                const resultsDiv = document.getElementById('sectionResults');
+
+                if (!data.success || data.sections.length === 0) {
+                    select.innerHTML = '<option value="">No sections available</option>';
+                    resultsDiv.innerHTML = '<div class="empty-state"><h3>No LaTeX Analysis Available</h3><p>Upload a LaTeX manuscript when processing references to enable this feature</p></div>';
+                    return;
+                }
+
+                availableSections = data.sections;
+                select.innerHTML = '<option value="">-- Select a section --</option>';
+                data.sections.forEach(section => {
+                    const option = document.createElement('option');
+                    option.value = section;
+                    option.textContent = section;
+                    select.appendChild(option);
+                });
+
+                resultsDiv.innerHTML = '<p style="color: #666; text-align: center; padding: 40px;">Select a section to view its references</p>';
+            } catch (error) {
+                console.error('Error loading sections:', error);
+            }
+        }
+
+        async function filterBySection() {
+            const section = document.getElementById('sectionSelect').value;
+            const resultsDiv = document.getElementById('sectionResults');
+
+            if (!section) {
+                resultsDiv.innerHTML = '<p style="color: #666; text-align: center; padding: 40px;">Select a section to view its references</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/sections/references?section=${encodeURIComponent(section)}`);
+                const data = await response.json();
+
+                if (!data.success || data.references.length === 0) {
+                    resultsDiv.innerHTML = `<div class="empty-state"><h3>No references found</h3><p>Section "${section}" has no citations</p></div>`;
+                    return;
+                }
+
+                let html = `<h3 style="color: #333; margin-bottom: 15px;">References in "${section}" (${data.references.length} total)</h3>`;
+                html += '<table class="results-table"><thead><tr><th>Key</th><th>Title</th><th>Authors</th><th>Year</th><th>Frequency</th></tr></thead><tbody>';
+
+                data.references.forEach(ref => {
+                    html += `<tr>
+                        <td><span class="badge badge-info">${ref.key}</span></td>
+                        <td>${ref.title.substring(0, 60)}${ref.title.length > 60 ? '...' : ''}</td>
+                        <td>${ref.authors.substring(0, 40)}${ref.authors.length > 40 ? '...' : ''}</td>
+                        <td>${ref.year}</td>
+                        <td><span class="badge badge-warning">${ref.frequency_in_section}×</span></td>
+                    </tr>`;
+                });
+
+                html += '</tbody></table>';
+                resultsDiv.innerHTML = html;
+            } catch (error) {
+                console.error('Error filtering by section:', error);
+                resultsDiv.innerHTML = '<div class="error">Error loading references for this section</div>';
             }
         }
 
@@ -857,7 +1039,6 @@ Natural language processing techniques`;
                 return;
             }
 
-            // Double confirmation
             if (!confirm('This action CANNOT be undone. All your references will be lost.\n\nClick OK to proceed with clearing the database.')) {
                 return;
             }
@@ -873,6 +1054,7 @@ Natural language processing techniques`;
                     alert(`✅ ${result.message}`);
                     loadDatabaseEntries();
                     loadStats();
+                    loadSections();
                 } else {
                     alert(`❌ Error: ${result.error}`);
                 }
@@ -908,6 +1090,7 @@ Natural language processing techniques`;
 
         function clearInput() {
             document.getElementById('bibtexInput').value = '';
+            document.getElementById('latexFile').value = '';
         }
 
         function showMessage(element, message, type) {
@@ -916,10 +1099,9 @@ Natural language processing techniques`;
             element.style.display = 'block';
         }
 
-        // Initial load - Database tab is default
+        // Initial load
         window.addEventListener('DOMContentLoaded', function() {
             loadStats();
-            loadDatabaseEntries();
         });
     </script>
 </body>
