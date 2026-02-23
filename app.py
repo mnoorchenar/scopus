@@ -70,18 +70,17 @@ def check_api_key():
     """Check API key for protected routes"""
     if app.config['ENVIRONMENT'] == 'development':
         return True
-    
     api_key = request.headers.get('X-API-Key')
     return api_key == app.config['API_KEY']
 
 # =====================================================================
-# LATEX CITATION PARSING (from overleaf.py)
+# LATEX CITATION PARSING
 # =====================================================================
 
 def parse_citations_from_tex(tex_content: str) -> pd.DataFrame:
     """Parse citations from LaTeX content with section tracking"""
     print("📖 Parsing citations from LaTeX")
-    
+
     lines = tex_content.split('\n')
     clean_text = "\n".join(line for line in lines if not line.strip().startswith("%"))
 
@@ -94,7 +93,7 @@ def parse_citations_from_tex(tex_content: str) -> pd.DataFrame:
         if i >= len(sections):
             break
         section_name = sections[i].strip()
-        section_text = sections[i+1] if i+1 < len(sections) else ""
+        section_text = sections[i + 1] if i + 1 < len(sections) else ""
         matches = cite_pattern.findall(section_text)
         for match in matches:
             for key in match.split(","):
@@ -124,7 +123,7 @@ def merge_citations_with_bib(citations_df: pd.DataFrame, bib_df: pd.DataFrame) -
     print("🔗 Merging citations with BibTeX")
     bib_lookup = bib_df.set_index("Key").to_dict(orient="index")
     merged_records = []
-    
+
     for _, row in citations_df.iterrows():
         key = row["Reference"]
         bib_info = bib_lookup.get(key, {})
@@ -143,7 +142,7 @@ def merge_citations_with_bib(citations_df: pd.DataFrame, bib_df: pd.DataFrame) -
             "DOI": bib_info.get("DOI", ""),
             "BibTeX": bib_info.get("BibTeX", "")
         })
-    
+
     df = pd.DataFrame(merged_records)
     print(f"✅ Merged into {len(df)} rows")
     return df
@@ -163,25 +162,20 @@ def abbreviate_journal_custom(title: str) -> str:
     """
     if not title:
         return ""
-    
+
     words = title.split()
     abbr = []
-    
+
     for i, word in enumerate(words):
-        # Keep prepositions and conjunctions in lowercase (except at start)
         if word.lower() in LOWERCASE_WORDS and i != 0:
             abbr.append(word.lower())
-        # Keep acronyms as-is (words with 2+ uppercase letters)
         elif sum(1 for c in word if c.isupper()) >= 2:
             abbr.append(word)
-        # Abbreviate long words (>4 letters) with period
         elif len(word) > 4:
-            # Take first 4 letters and add period
             abbr.append(word[:4].capitalize() + ".")
-        # Short words (≤4 letters): add period
         else:
             abbr.append(word.capitalize() + ".")
-    
+
     return " ".join(abbr)
 
 def get_db_connection():
@@ -194,8 +188,7 @@ def init_db():
     """Initialize database with proper schema"""
     conn = get_db_connection()
     cur = conn.cursor()
-    
-    # Create table with all columns in proper order
+
     cur.execute("""
         CREATE TABLE IF NOT EXISTS bibliography (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -227,14 +220,13 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
-    
-    # Create index on DOI
+
     cur.execute("""
-        CREATE INDEX IF NOT EXISTS idx_bib_doi 
-        ON bibliography(doi) 
+        CREATE INDEX IF NOT EXISTS idx_bib_doi
+        ON bibliography(doi)
         WHERE doi IS NOT NULL AND doi != ''
     """)
-    
+
     conn.commit()
     conn.close()
 
@@ -249,7 +241,7 @@ def scan_brace_balanced_value(text, start_pos):
     """Scan for brace-balanced field value"""
     if start_pos >= len(text):
         return "", start_pos
-    
+
     if text[start_pos] == '{':
         depth = 1
         pos = start_pos + 1
@@ -259,14 +251,14 @@ def scan_brace_balanced_value(text, start_pos):
             elif text[pos] == '}':
                 depth -= 1
             pos += 1
-        return text[start_pos+1:pos-1], pos
+        return text[start_pos + 1:pos - 1], pos
     elif text[start_pos] == '"':
         pos = start_pos + 1
         while pos < len(text):
-            if text[pos] == '"' and text[pos-1] != '\\':
-                return text[start_pos+1:pos], pos + 1
+            if text[pos] == '"' and text[pos - 1] != '\\':
+                return text[start_pos + 1:pos], pos + 1
             pos += 1
-        return text[start_pos+1:], len(text)
+        return text[start_pos + 1:], len(text)
     else:
         pos = start_pos
         while pos < len(text) and text[pos] not in ',}':
@@ -278,31 +270,31 @@ def parse_bibtex_entry(entry_text):
     match = re.match(r'@(\w+)\s*\{([^,]+),', entry_text)
     if not match:
         return None
-    
+
     entry_type, entry_key = match.groups()
     fields = {}
-    
+
     fields_start = entry_text.find(entry_key) + len(entry_key) + 1
     fields_text = entry_text[fields_start:]
-    
+
     pos = 0
     while pos < len(fields_text):
         while pos < len(fields_text) and fields_text[pos] in ' \t\n\r,':
             pos += 1
         if pos >= len(fields_text) or fields_text[pos] == '}':
             break
-        
+
         field_match = re.match(r'(\w+)\s*=\s*', fields_text[pos:])
         if not field_match:
             break
-        
+
         field_name = field_match.group(1).lower()
         pos += field_match.end()
-        
+
         value, new_pos = scan_brace_balanced_value(fields_text, pos)
         fields[field_name] = value.strip()
         pos = new_pos
-    
+
     return {
         'type': entry_type,
         'key': entry_key.strip(),
@@ -318,9 +310,9 @@ def parse_bibtex_input(bibtex_content):
         parsed = parse_bibtex_entry(entry)
         if not parsed:
             continue
-        
+
         fields = parsed['fields']
-        
+
         papers.append({
             "Key": parsed['key'],
             "Type": parsed['type'],
@@ -342,35 +334,35 @@ def clean_bibtex_fields(bibtex):
     """Remove unwanted fields from BibTeX entries"""
     if not bibtex:
         return bibtex
-        
+
     fields_to_remove = ['url', 'source', 'publication_stage', 'note', 'abstract']
-    
+
     for field in fields_to_remove:
         pattern = rf'\s*{field}\s*=\s*'
         pos = 0
         result = []
-        
+
         while pos < len(bibtex):
             match = re.search(pattern, bibtex[pos:], re.IGNORECASE)
             if not match:
                 result.append(bibtex[pos:])
                 break
-            
+
             result.append(bibtex[pos:pos + match.start()])
             value_start = pos + match.end()
             _, value_end = scan_brace_balanced_value(bibtex, value_start)
-            
+
             while value_end < len(bibtex) and bibtex[value_end] in ' \t\n\r,':
                 value_end += 1
-            
+
             pos = value_end
-        
+
         bibtex = ''.join(result)
-    
+
     bibtex = re.sub(r'\n\s*\n\s*\n', '\n\n', bibtex)
     bibtex = re.sub(r',\s*,', ',', bibtex)
     bibtex = re.sub(r',(\s*)\}', r'\1}', bibtex)
-    
+
     lines = [line for line in bibtex.split('\n') if line.strip()]
     return '\n'.join(lines)
 
@@ -378,7 +370,7 @@ def protect_acronyms_in_fields(bibtex):
     """Protect acronyms with braces"""
     if not bibtex:
         return bibtex
-        
+
     def wrap_token(token):
         if token.startswith("{") and token.endswith("}"):
             return token
@@ -391,7 +383,7 @@ def protect_acronyms_in_fields(bibtex):
             inner = value[1:-1]
             if not ('{' in inner and '}' in inner):
                 return value
-        
+
         tokens = re.split(r'(\s+)', value)
         fixed = "".join(wrap_token(tok) if tok.strip() else tok for tok in tokens)
         fixed = re.sub(r'\{\{([^{}]+)\}\}', r'{\1}', fixed)
@@ -400,11 +392,11 @@ def protect_acronyms_in_fields(bibtex):
     for field in ["title", "booktitle", "journal"]:
         pattern = rf'({field}\s*=\s*)'
         matches = list(re.finditer(pattern, bibtex, re.IGNORECASE))
-        
+
         for match in reversed(matches):
             field_start = match.end()
             value, value_end = scan_brace_balanced_value(bibtex, field_start)
-            
+
             if value:
                 processed = process_field_value(value)
                 new_field = f"{match.group(1)}{{{processed}}}"
@@ -416,23 +408,23 @@ def replace_bibtex_key(bibtex, new_key):
     """Replace the citation key in a BibTeX entry"""
     if not bibtex:
         return bibtex
-    
+
     try:
         start_brace = bibtex.index("{")
         first_comma = bibtex.index(",", start_brace)
         entry_type = bibtex[:start_brace]
         new_start = f"{entry_type}{{{new_key},"
-        return new_start + bibtex[first_comma+1:]
+        return new_start + bibtex[first_comma + 1:]
     except ValueError:
         return bibtex
 
 def enrich_with_crossref(df):
     """Enrich references with Crossref data"""
     enriched_rows = []
-    
+
     for idx, row in df.iterrows():
         enriched_data = dict(row)
-        
+
         if not row.get('Title'):
             enriched_data['Crossref_BibTeX'] = row.get('BibTeX', '')
             enriched_data['Title_Similarity'] = 0
@@ -446,7 +438,7 @@ def enrich_with_crossref(df):
             query_parts.append(row['Journal/Booktitle'])
         if row.get('Year'):
             query_parts.append(row['Year'])
-        
+
         query = " ".join(query_parts)
 
         try:
@@ -462,16 +454,16 @@ def enrich_with_crossref(df):
             for item in items:
                 cr_title = item.get("title", [""])[0]
                 score = SequenceMatcher(None, row['Title'].lower(), cr_title.lower()).ratio()
-                
+
                 if row.get('Year') and 'published-print' in item:
                     cr_year = str(item['published-print'].get('date-parts', [['']])[0][0])
                     if row['Year'].strip() == cr_year:
                         score = min(1.0, score + 0.1)
-                
+
                 if score > best_score:
                     best_score = score
                     best_doi = item.get('DOI', best_doi)
-                    
+
                     if best_doi:
                         try:
                             bibtex_response = HTTP.get(
@@ -488,7 +480,7 @@ def enrich_with_crossref(df):
             enriched_data['Title_Similarity'] = int(round(best_score * 100))
             if best_doi:
                 enriched_data['DOI'] = best_doi
-            
+
         except Exception as e:
             print(f"⚠️ Crossref enrichment failed: {e}")
             enriched_data['Crossref_BibTeX'] = row.get('BibTeX', '')
@@ -502,26 +494,24 @@ def enrich_with_crossref(df):
 def add_journal_abbreviations(df):
     """Add journal abbreviations and create all BibTeX versions"""
     abbreviated_rows = []
-    
+
     for idx, row in df.iterrows():
         journal = row.get('Journal/Booktitle', '')
         journal_abbrev = abbreviate_journal_custom(journal)
-        
+
         row_data = dict(row)
         row_data['Journal_Abbreviation'] = journal_abbrev
-        
-        # Create LocalKey version
+
         key_to_use = row_data.get('Key') or row_data.get('Reference') or f"ref_{idx}"
-        
+
         if row_data.get('Crossref_BibTeX'):
             row_data['Crossref_BibTeX_LocalKey'] = replace_bibtex_key(
-                row_data['Crossref_BibTeX'], 
+                row_data['Crossref_BibTeX'],
                 key_to_use
             )
         else:
             row_data['Crossref_BibTeX_LocalKey'] = row_data.get('BibTeX', '')
-        
-        # Create abbreviated version
+
         if journal_abbrev and row_data.get('Crossref_BibTeX_LocalKey'):
             new_bib = row_data['Crossref_BibTeX_LocalKey'].strip()
             new_bib = re.sub(
@@ -533,18 +523,16 @@ def add_journal_abbreviations(df):
             row_data['Crossref_BibTeX_Abbrev'] = new_bib
         else:
             row_data['Crossref_BibTeX_Abbrev'] = row_data.get('Crossref_BibTeX_LocalKey', row_data.get('BibTeX', ''))
-        
-        # Create protected version
+
         row_data['Crossref_BibTeX_Protected'] = protect_acronyms_in_fields(
             row_data.get('Crossref_BibTeX_Abbrev', row_data.get('BibTeX', ''))
         )
-        
-        # Clean all versions
-        for bib_col in ['BibTeX', 'Crossref_BibTeX', 'Crossref_BibTeX_LocalKey', 
+
+        for bib_col in ['BibTeX', 'Crossref_BibTeX', 'Crossref_BibTeX_LocalKey',
                         'Crossref_BibTeX_Abbrev', 'Crossref_BibTeX_Protected']:
             if row_data.get(bib_col):
                 row_data[bib_col] = clean_bibtex_fields(row_data[bib_col])
-        
+
         abbreviated_rows.append(row_data)
 
     return pd.DataFrame(abbreviated_rows)
@@ -555,17 +543,19 @@ def add_journal_abbreviations(df):
 
 @app.route('/')
 def index():
-    """Main page"""
-    return render_template('index.html')
+    """Main page — falls back to JSON status if template is missing"""
+    try:
+        return render_template('index.html')
+    except Exception:
+        return jsonify({'status': 'running', 'message': 'Reference Management API is live. No index.html found in templates/.'}), 200
 
 @app.route('/api/process', methods=['POST'])
 def process_bibtex():
     """Process BibTeX content with optional LaTeX analysis"""
     if not check_api_key():
         return jsonify({'error': 'Unauthorized'}), 401
-    
+
     try:
-        # Handle both JSON and FormData
         if request.is_json:
             data = request.get_json()
             bibtex_content = data.get('bibtex_content') or data.get('bibtex', '')
@@ -576,7 +566,6 @@ def process_bibtex():
             save_to_db = data.get('save_to_db', False)
             latex_file = None
         else:
-            # FormData from file upload
             bibtex_content = request.form.get('bibtex_content', '')
             input_mode = request.form.get('input_mode', 'bibtex')
             enrich = request.form.get('enrich', 'false').lower() == 'true'
@@ -584,18 +573,17 @@ def process_bibtex():
             protect = request.form.get('protect', 'false').lower() == 'true'
             save_to_db = request.form.get('save_to_db', 'false').lower() == 'true'
             latex_file = request.files.get('latex_file')
-        
+
         print(f"📥 Received: {len(bibtex_content)} chars, mode={input_mode}")
-        
+
         # TITLE MODE: Search Crossref for each title
         if input_mode == 'title':
             titles = [line.strip() for line in bibtex_content.split('\n') if line.strip()]
             print(f"🔍 Title mode: searching for {len(titles)} titles")
-            
+
             if not titles:
                 return jsonify({'error': 'No titles provided'}), 400
-            
-            # Convert titles to BibTeX entries via Crossref
+
             bibtex_entries = []
             for i, title in enumerate(titles, 1):
                 print(f"  [{i}/{len(titles)}] Searching: {title[:50]}...")
@@ -603,7 +591,7 @@ def process_bibtex():
                     url = f"https://api.crossref.org/works?query.bibliographic={requests.utils.quote(title)}&rows=1"
                     response = HTTP.get(url, timeout=15)
                     items = response.json().get("message", {}).get("items", [])
-                    
+
                     if items and items[0].get('DOI'):
                         doi = items[0]['DOI']
                         bibtex_r = HTTP.get(
@@ -614,27 +602,25 @@ def process_bibtex():
                         if bibtex_r.status_code == 200:
                             bibtex_entries.append(bibtex_r.text.strip())
                             print(f"    ✅ Found via DOI: {doi}")
-                    
+
                     time.sleep(random.uniform(1, 2))
                 except Exception as e:
                     print(f"    ⚠️ Failed: {e}")
-            
+
             bibtex_content = '\n\n'.join(bibtex_entries)
             print(f"✅ Retrieved {len(bibtex_entries)} BibTeX entries from titles")
-            
+
             if not bibtex_content:
                 return jsonify({'error': 'No BibTeX entries found for the provided titles'}), 400
-        
+
         if not bibtex_content or len(bibtex_content.strip()) == 0:
             return jsonify({'error': 'No BibTeX content provided'}), 400
-        
-        # Parse BibTeX
+
         df = parse_bibtex_input(bibtex_content)
-        
+
         if df.empty:
             return jsonify({'error': 'No valid BibTeX entries found'}), 400
-        
-        # Parse LaTeX file if provided
+
         latex_analyzed = False
         citations_found = 0
         if latex_file:
@@ -643,41 +629,36 @@ def process_bibtex():
                 latex_content = latex_file.read().decode('utf-8')
                 citations_df = parse_citations_from_tex(latex_content)
                 citations_found = len(citations_df)
-                
-                # Merge LaTeX citation data with BibTeX data
                 df = merge_citations_with_bib(citations_df, df)
                 df.insert(0, "Index", range(1, len(df) + 1))
                 latex_analyzed = True
                 print(f"✅ LaTeX analyzed: {citations_found} citations found")
             except Exception as e:
                 print(f"⚠️ LaTeX analysis failed: {e}")
-        
-        # Enrich if requested
+
         if enrich:
             df = enrich_with_crossref(df)
         else:
             df['Crossref_BibTeX'] = df['BibTeX']
             df['Title_Similarity'] = 0
-        
-        # Always create all versions
+
         df = add_journal_abbreviations(df)
-        
-        # Save to database if requested
+
         db_id = None
         if save_to_db:
             conn = get_db_connection()
             cursor = conn.cursor()
             session_id = datetime.now().isoformat()
-            
+
             for _, row in df.iterrows():
                 doi = row.get('DOI', '').strip()
                 year_int = extract_year_int(row.get('Year', ''))
                 key_val = row.get('Reference') or row.get('Key', f"ref_{row.name}")
-                
+
                 try:
                     cursor.execute('''
-                        INSERT OR REPLACE INTO bibliography 
-                        (index_num, session_id, reference, frequency, sections, key, doi, type, 
+                        INSERT OR REPLACE INTO bibliography
+                        (index_num, session_id, reference, frequency, sections, key, doi, type,
                          authors, title, journal_booktitle, year, year_int, publisher, volume, pages,
                          bibtex, crossref_bibtex, crossref_bibtex_localkey, title_similarity,
                          journal_abbreviation, crossref_bibtex_abbrev, crossref_bibtex_protected,
@@ -699,25 +680,23 @@ def process_bibtex():
                     ))
                 except sqlite3.IntegrityError as e:
                     print(f"⚠️ DB insert failed for {key_val}: {e}")
-            
+
             conn.commit()
             db_id = session_id
             conn.close()
 
-        # Determine final BibTeX column
         if protect:
             final_bibtex_col = 'Crossref_BibTeX_Protected'
         elif abbreviate:
             final_bibtex_col = 'Crossref_BibTeX_Abbrev'
         else:
             final_bibtex_col = 'Crossref_BibTeX_LocalKey'
-        
-        # Prepare response columns
+
         response_cols = ['Key', 'Type', 'Authors', 'Title', 'Journal/Booktitle', 'Year', final_bibtex_col]
         if latex_analyzed:
             response_cols.insert(6, 'Frequency')
             response_cols.insert(7, 'Sections')
-        
+
         response_df = df[[col for col in response_cols if col in df.columns]].copy()
         response_df.columns = list(response_df.columns[:-1]) + ['Final_BibTeX']
 
@@ -742,23 +721,19 @@ def list_sections():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        
         cursor.execute('SELECT DISTINCT sections FROM bibliography WHERE sections IS NOT NULL AND sections != ""')
         rows = cursor.fetchall()
         conn.close()
-        
-        # Parse and deduplicate sections
+
         all_sections = set()
         for row in rows:
             if row[0]:
                 sections = [s.strip() for s in row[0].split(',')]
                 all_sections.update(sections)
-        
-        sections_list = sorted(list(all_sections))
-        
+
         return jsonify({
             'success': True,
-            'sections': sections_list
+            'sections': sorted(list(all_sections))
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -767,34 +742,30 @@ def list_sections():
 def get_references_by_section():
     """Get all references for a specific section"""
     section = request.args.get('section', '')
-    
+
     if not section:
         return jsonify({'error': 'Section parameter required'}), 400
-    
+
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        
-        # Find all references that contain this section
         cursor.execute('''
             SELECT key, title, authors, year, frequency, sections, reference
-            FROM bibliography 
+            FROM bibliography
             WHERE sections LIKE ?
         ''', (f'%{section}%',))
-        
+
         rows = cursor.fetchall()
         conn.close()
-        
+
         references = []
         for row in rows:
-            # Calculate frequency in this specific section
             sections_list = [s.strip() for s in row[5].split(',') if s.strip()]
             if section in sections_list:
-                # Count occurrences in this section (simplified - assumes equal distribution)
                 total_freq = row[4] or 0
                 num_sections = len(sections_list)
                 freq_in_section = total_freq // num_sections if num_sections > 0 else total_freq
-                
+
                 references.append({
                     'key': row[0],
                     'title': row[1],
@@ -804,7 +775,7 @@ def get_references_by_section():
                     'total_frequency': total_freq,
                     'all_sections': row[5]
                 })
-        
+
         return jsonify({
             'success': True,
             'section': section,
@@ -819,16 +790,11 @@ def get_database_entries():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        
-        cursor.execute('''
-            SELECT * FROM bibliography ORDER BY created_at DESC LIMIT 100
-        ''')
-        
+        cursor.execute('SELECT * FROM bibliography ORDER BY created_at DESC LIMIT 100')
         columns = [description[0] for description in cursor.description]
         entries = [dict(zip(columns, row)) for row in cursor.fetchall()]
-        
         conn.close()
-        
+
         return jsonify({
             'success': True,
             'count': len(entries),
@@ -842,14 +808,13 @@ def delete_entry(key):
     """Delete entry from database"""
     if not check_api_key():
         return jsonify({'error': 'Unauthorized'}), 401
-    
+
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute('DELETE FROM bibliography WHERE key=?', (key,))
         conn.commit()
         conn.close()
-        
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -859,21 +824,22 @@ def clear_database():
     """Clear all entries from database"""
     if not check_api_key():
         return jsonify({'error': 'Unauthorized'}), 401
-    
+
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        
         cursor.execute('DELETE FROM bibliography')
         deleted_count = cursor.rowcount
-        
-        cursor.execute('DELETE FROM sqlite_sequence WHERE name="bibliography"')
-        
+        # Reset autoincrement counter safely
+        try:
+            cursor.execute('DELETE FROM sqlite_sequence WHERE name="bibliography"')
+        except sqlite3.OperationalError:
+            pass  # sqlite_sequence may not exist if no rows were ever inserted
         conn.commit()
         conn.close()
-        
+
         print(f"🗑️ Cleared {deleted_count} entries from database")
-        
+
         return jsonify({
             'success': True,
             'deleted_count': deleted_count,
@@ -891,11 +857,11 @@ def export_database():
         conn = get_db_connection()
         df = pd.read_sql_query('SELECT * FROM bibliography', conn)
         conn.close()
-        
+
         output = io.StringIO()
         df.to_csv(output, index=False)
         output.seek(0)
-        
+
         return send_file(
             io.BytesIO(output.getvalue().encode()),
             mimetype='text/csv',
@@ -912,11 +878,9 @@ def export_bibtex():
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute('SELECT key, crossref_bibtex_protected FROM bibliography ORDER BY key')
-        
         bibtex_content = '\n\n'.join([row[1] for row in cursor.fetchall() if row[1]])
-        
         conn.close()
-        
+
         return send_file(
             io.BytesIO(bibtex_content.encode()),
             mimetype='text/plain',
@@ -945,18 +909,18 @@ def get_stats():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        
+
         cursor.execute('SELECT COUNT(*) FROM bibliography')
         total = cursor.fetchone()[0]
-        
+
         cursor.execute('SELECT COUNT(DISTINCT type) FROM bibliography')
         types = cursor.fetchone()[0]
-        
+
         cursor.execute('SELECT COUNT(DISTINCT year_int) FROM bibliography WHERE year_int IS NOT NULL')
         years = cursor.fetchone()[0]
-        
+
         conn.close()
-        
+
         return jsonify({
             'total_entries': total,
             'entry_types': types,
@@ -965,6 +929,10 @@ def get_stats():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# =====================================================================
+# INIT DB AT MODULE LEVEL — required for gunicorn / HuggingFace Spaces
+# =====================================================================
+init_db()
+
 if __name__ == '__main__':
-    init_db()
     app.run(debug=False, host='0.0.0.0', port=7860)
