@@ -1,938 +1,886 @@
-"""
-Flask Application for Reference Management Pipeline
-Complete implementation matching overleaf.py functionality
-Includes LaTeX citation parsing, BibTeX processing, and full pipeline
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RefManager</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
 
-FEATURES:
-- Fixed abbreviations to include periods (ISO 4 standard): "Energy" → "Ener."
-- LaTeX manuscript analysis for citation frequency and section tracking
-- Filter references by section
-- Clear entire database
-"""
+  :root {
+    --bg: #0e0e0e;
+    --surface: #161616;
+    --border: #2a2a2a;
+    --accent: #c8f06e;
+    --accent-dim: #8aaa40;
+    --text: #e8e8e8;
+    --text-dim: #888;
+    --text-faint: #444;
+    --red: #ff5f5f;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
 
-from flask import Flask, render_template, request, jsonify, send_file
-import sqlite3
-import pandas as pd
-import os
-import json
-from datetime import datetime
-import re
-from difflib import SequenceMatcher
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
-import io
-import time
-import random
-import hashlib
-from werkzeug.utils import secure_filename
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-app = Flask(__name__)
-app.config['DATABASE'] = 'refs_management.db'
-app.config['API_KEY'] = os.environ.get('API_KEY', 'your-secret-key-here')
-app.config['ENVIRONMENT'] = os.environ.get('ENVIRONMENT', 'development')
-app.config['UPLOAD_FOLDER'] = '/tmp/uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
 
-# Create upload folder
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+  /* LAYOUT */
+  .app {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    height: 100vh;
+    overflow: hidden;
+  }
 
-# Prepositions to keep lowercase in abbreviations
-LOWERCASE_WORDS = {"and", "or", "in", "on", "of", "for", "to", "the", "a", "an", "with", "at", "by", "from"}
+  header {
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--surface);
+  }
 
-# =====================================================================
-# HTTP CLIENT WITH RETRIES
-# =====================================================================
+  header .logo {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
 
-def make_http_session():
-    """Create HTTP session with retries and proper headers"""
-    s = requests.Session()
-    retry = Retry(
-        total=5,
-        backoff_factor=0.8,
-        status_forcelist=[429, 500, 502, 503, 504],
-        allowed_methods=["GET"]
-    )
-    s.mount("https://", HTTPAdapter(max_retries=retry))
-    s.headers.update({
-        "User-Agent": "RefsManagement/1.0 (mailto:contact@example.com)",
-        "Accept": "application/json",
-    })
-    return s
+  header .tagline {
+    color: var(--text-dim);
+    font-size: 12px;
+    font-family: var(--mono);
+  }
 
-HTTP = make_http_session()
+  header .stats {
+    margin-left: auto;
+    display: flex;
+    gap: 20px;
+  }
 
-# =====================================================================
-# AUTHENTICATION
-# =====================================================================
+  .stat {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
+  }
 
-def check_api_key():
-    """Check API key for protected routes"""
-    if app.config['ENVIRONMENT'] == 'development':
-        return True
-    api_key = request.headers.get('X-API-Key')
-    return api_key == app.config['API_KEY']
+  .stat-val {
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--accent);
+    line-height: 1;
+  }
 
-# =====================================================================
-# LATEX CITATION PARSING
-# =====================================================================
+  .stat-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
 
-def parse_citations_from_tex(tex_content: str) -> pd.DataFrame:
-    """Parse citations from LaTeX content with section tracking"""
-    print("📖 Parsing citations from LaTeX")
+  /* MAIN BODY */
+  .main {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    overflow: hidden;
+  }
 
-    lines = tex_content.split('\n')
-    clean_text = "\n".join(line for line in lines if not line.strip().startswith("%"))
+  /* LEFT PANEL */
+  .left-panel {
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--surface);
+  }
 
-    section_pattern = re.compile(r'\\section\{([^}]*)\}(?:\\label\{[^}]*\})?')
-    cite_pattern = re.compile(r'\\cite\{([^}]*)\}')
-    sections = section_pattern.split(clean_text)
+  .panel-header {
+    padding: 14px 18px 10px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
 
-    citations, ref_sections = [], {}
-    for i in range(1, len(sections), 2):
-        if i >= len(sections):
-            break
-        section_name = sections[i].strip()
-        section_text = sections[i + 1] if i + 1 < len(sections) else ""
-        matches = cite_pattern.findall(section_text)
-        for match in matches:
-            for key in match.split(","):
-                ref = key.strip()
-                citations.append(ref)
-                if ref not in ref_sections:
-                    ref_sections[ref] = []
-                if section_name not in ref_sections[ref]:
-                    ref_sections[ref].append(section_name)
+  .panel-header span { color: var(--accent); }
 
-    freq, order = {}, []
-    for c in citations:
-        if c not in freq:
-            order.append(c)
-        freq[c] = freq.get(c, 0) + 1
+  textarea {
+    flex: 1;
+    resize: none;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    line-height: 1.6;
+    padding: 14px 18px;
+    overflow-y: auto;
+  }
 
-    df = pd.DataFrame({
-        "Reference": order,
-        "Frequency": [freq[c] for c in order],
-        "Sections": [", ".join(ref_sections[c]) for c in order]
-    })
-    print(f"✅ Found {len(df)} unique citations")
-    return df
+  textarea::placeholder { color: var(--text-faint); }
 
-def merge_citations_with_bib(citations_df: pd.DataFrame, bib_df: pd.DataFrame) -> pd.DataFrame:
-    """Merge citations with BibTeX entries"""
-    print("🔗 Merging citations with BibTeX")
-    bib_lookup = bib_df.set_index("Key").to_dict(orient="index")
-    merged_records = []
+  textarea::-webkit-scrollbar { width: 4px; }
+  textarea::-webkit-scrollbar-track { background: transparent; }
+  textarea::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-    for _, row in citations_df.iterrows():
-        key = row["Reference"]
-        bib_info = bib_lookup.get(key, {})
-        merged_records.append({
-            "Reference": key,
-            "Frequency": row["Frequency"],
-            "Sections": row["Sections"],
-            "Type": bib_info.get("Type", ""),
-            "Authors": bib_info.get("Authors", ""),
-            "Title": bib_info.get("Title", ""),
-            "Journal/Booktitle": bib_info.get("Journal/Booktitle", ""),
-            "Year": bib_info.get("Year", ""),
-            "Publisher": bib_info.get("Publisher", ""),
-            "Volume": bib_info.get("Volume", ""),
-            "Pages": bib_info.get("Pages", ""),
-            "DOI": bib_info.get("DOI", ""),
-            "BibTeX": bib_info.get("BibTeX", "")
-        })
+  /* OPTIONS ROW */
+  .options-row {
+    padding: 12px 18px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
 
-    df = pd.DataFrame(merged_records)
-    print(f"✅ Merged into {len(df)} rows")
-    return df
+  .toggle-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
 
-# =====================================================================
-# UTILITY FUNCTIONS
-# =====================================================================
+  .toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+  }
 
-def abbreviate_journal_custom(title: str) -> str:
-    """
-    Custom abbreviation with periods (ISO 4 standard)
-    Examples:
-      "Energy" → "Ener."
-      "Applied Energy" → "Appl. Ener."
-      "Journal of Energy" → "J. of Ener."
-      "IEEE Transactions on Neural Networks" → "IEEE Trans. on Neural Netw."
-    """
-    if not title:
-        return ""
+  .toggle input { display: none; }
 
-    words = title.split()
-    abbr = []
+  .toggle-pill {
+    width: 28px;
+    height: 15px;
+    background: var(--border);
+    border-radius: 8px;
+    position: relative;
+    transition: background 0.2s;
+  }
 
-    for i, word in enumerate(words):
-        if word.lower() in LOWERCASE_WORDS and i != 0:
-            abbr.append(word.lower())
-        elif sum(1 for c in word if c.isupper()) >= 2:
-            abbr.append(word)
-        elif len(word) > 4:
-            abbr.append(word[:4].capitalize() + ".")
-        else:
-            abbr.append(word.capitalize() + ".")
+  .toggle-pill::after {
+    content: '';
+    position: absolute;
+    width: 11px;
+    height: 11px;
+    background: var(--text-dim);
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+    transition: left 0.2s, background 0.2s;
+  }
 
-    return " ".join(abbr)
+  .toggle input:checked ~ .toggle-pill { background: var(--accent-dim); }
+  .toggle input:checked ~ .toggle-pill::after { left: 15px; background: var(--accent); }
 
-def get_db_connection():
-    """Get database connection"""
-    conn = sqlite3.connect(app.config['DATABASE'])
-    conn.row_factory = sqlite3.Row
-    return conn
+  .toggle-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: var(--mono);
+  }
 
-def init_db():
-    """Initialize database with proper schema"""
-    conn = get_db_connection()
-    cur = conn.cursor()
+  .file-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS bibliography (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            index_num INTEGER,
-            session_id TEXT,
-            reference TEXT,
-            frequency INTEGER,
-            sections TEXT,
-            key TEXT UNIQUE,
-            doi TEXT,
-            type TEXT,
-            authors TEXT,
-            title TEXT,
-            journal_booktitle TEXT,
-            year TEXT,
-            year_int INTEGER,
-            publisher TEXT,
-            volume TEXT,
-            pages TEXT,
-            bibtex TEXT,
-            crossref_bibtex TEXT,
-            crossref_bibtex_localkey TEXT,
-            title_similarity INTEGER,
-            journal_abbreviation TEXT,
-            crossref_bibtex_abbrev TEXT,
-            crossref_bibtex_protected TEXT,
-            used TEXT,
-            imported_date TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
+  .file-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    white-space: nowrap;
+  }
 
-    cur.execute("""
-        CREATE INDEX IF NOT EXISTS idx_bib_doi
-        ON bibliography(doi)
-        WHERE doi IS NOT NULL AND doi != ''
-    """)
+  .file-input-wrap {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
 
-    conn.commit()
-    conn.close()
+  .file-input-wrap input[type="file"] {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+  }
 
-def extract_year_int(year_str):
-    """Extract integer year from year string"""
-    if not year_str:
-        return None
-    match = re.search(r'\d{4}', str(year_str))
-    return int(match.group()) if match else None
+  .file-display {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-faint);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 4px 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+  }
 
-def scan_brace_balanced_value(text, start_pos):
-    """Scan for brace-balanced field value"""
-    if start_pos >= len(text):
-        return "", start_pos
+  .file-display.has-file { color: var(--accent); border-color: var(--accent-dim); }
 
-    if text[start_pos] == '{':
-        depth = 1
-        pos = start_pos + 1
-        while pos < len(text) and depth > 0:
-            if text[pos] == '{':
-                depth += 1
-            elif text[pos] == '}':
-                depth -= 1
-            pos += 1
-        return text[start_pos + 1:pos - 1], pos
-    elif text[start_pos] == '"':
-        pos = start_pos + 1
-        while pos < len(text):
-            if text[pos] == '"' and text[pos - 1] != '\\':
-                return text[start_pos + 1:pos], pos + 1
-            pos += 1
-        return text[start_pos + 1:], len(text)
-    else:
-        pos = start_pos
-        while pos < len(text) and text[pos] not in ',}':
-            pos += 1
-        return text[start_pos:pos].strip(), pos
+  /* ACTION BUTTONS */
+  .action-row {
+    padding: 12px 18px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+  }
 
-def parse_bibtex_entry(entry_text):
-    """Parse single BibTeX entry with proper brace balancing"""
-    match = re.match(r'@(\w+)\s*\{([^,]+),', entry_text)
-    if not match:
-        return None
+  .btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    padding: 8px 14px;
+    transition: all 0.15s;
+  }
 
-    entry_type, entry_key = match.groups()
-    fields = {}
+  .btn-primary {
+    background: var(--accent);
+    color: #0e0e0e;
+    flex: 1;
+  }
 
-    fields_start = entry_text.find(entry_key) + len(entry_key) + 1
-    fields_text = entry_text[fields_start:]
+  .btn-primary:hover { background: #d8ff7e; }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:disabled { background: var(--border); color: var(--text-faint); cursor: not-allowed; }
 
-    pos = 0
-    while pos < len(fields_text):
-        while pos < len(fields_text) and fields_text[pos] in ' \t\n\r,':
-            pos += 1
-        if pos >= len(fields_text) or fields_text[pos] == '}':
-            break
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
 
-        field_match = re.match(r'(\w+)\s*=\s*', fields_text[pos:])
-        if not field_match:
-            break
+  .btn-ghost:hover { border-color: var(--text-dim); color: var(--text); }
 
-        field_name = field_match.group(1).lower()
-        pos += field_match.end()
+  .btn-danger {
+    background: transparent;
+    color: var(--red);
+    border: 1px solid #3a1a1a;
+  }
 
-        value, new_pos = scan_brace_balanced_value(fields_text, pos)
-        fields[field_name] = value.strip()
-        pos = new_pos
+  .btn-danger:hover { background: #1e0a0a; border-color: var(--red); }
 
-    return {
-        'type': entry_type,
-        'key': entry_key.strip(),
-        'fields': fields
+  /* RIGHT PANEL */
+  .right-panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg);
+  }
+
+  .right-toolbar {
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .right-toolbar .panel-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+  }
+
+  .right-toolbar .count-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+    background: rgba(200,240,110,0.08);
+    border: 1px solid rgba(200,240,110,0.2);
+    border-radius: 10px;
+    padding: 2px 8px;
+  }
+
+  .toolbar-right {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+  }
+
+  /* REFERENCES LIST */
+  .refs-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+  }
+
+  .refs-list::-webkit-scrollbar { width: 4px; }
+  .refs-list::-webkit-scrollbar-track { background: transparent; }
+  .refs-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .ref-row {
+    display: grid;
+    grid-template-columns: 48px 100px 1fr 130px 140px;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+    transition: background 0.1s;
+    cursor: pointer;
+    min-height: 38px;
+  }
+
+  .ref-row:hover { background: rgba(255,255,255,0.025); }
+  .ref-row.expanded { background: rgba(200,240,110,0.04); }
+
+  .ref-cell {
+    padding: 8px 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+    border-right: 1px solid var(--border);
+  }
+
+  .ref-cell:last-child { border-right: none; }
+
+  .cell-idx {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-faint);
+    text-align: center;
+  }
+
+  .cell-year {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .cell-title {
+    color: var(--text);
+    font-size: 12px;
+  }
+
+  .cell-journal {
+    color: var(--text-dim);
+    font-size: 11px;
+    font-style: italic;
+  }
+
+  .cell-key {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-faint);
+  }
+
+  /* COL HEADERS */
+  .refs-header {
+    display: grid;
+    grid-template-columns: 48px 100px 1fr 130px 140px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    flex-shrink: 0;
+  }
+
+  .col-head {
+    padding: 6px 12px;
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-faint);
+    border-right: 1px solid var(--border);
+  }
+
+  .col-head:last-child { border-right: none; }
+
+  /* EXPANDED BIB ROW */
+  .bibtex-row {
+    display: none;
+    border-bottom: 1px solid var(--border);
+    background: rgba(200,240,110,0.03);
+  }
+
+  .bibtex-row.open { display: block; }
+
+  .bibtex-content {
+    padding: 10px 14px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--text-dim);
+    white-space: pre-wrap;
+    line-height: 1.6;
+    border-left: 2px solid var(--accent-dim);
+    margin: 0 0 0 60px;
+    position: relative;
+  }
+
+  .copy-inline-btn {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    font-family: var(--mono);
+    font-size: 10px;
+    background: var(--border);
+    color: var(--text-dim);
+    border: none;
+    border-radius: 2px;
+    padding: 3px 8px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    transition: all 0.15s;
+  }
+
+  .copy-inline-btn:hover { background: var(--accent-dim); color: #0e0e0e; }
+  .copy-inline-btn.copied { background: var(--accent); color: #0e0e0e; }
+
+  /* EMPTY STATE */
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-faint);
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+
+  .empty-icon { font-size: 32px; opacity: 0.3; }
+
+  /* LOADING */
+  .loading-bar {
+    height: 2px;
+    background: var(--border);
+    display: none;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .loading-bar.active { display: block; }
+
+  .loading-fill {
+    height: 100%;
+    background: var(--accent);
+    animation: load-sweep 1.4s infinite ease-in-out;
+  }
+
+  @keyframes load-sweep {
+    0% { width: 0; margin-left: 0; }
+    50% { width: 60%; margin-left: 20%; }
+    100% { width: 0; margin-left: 100%; }
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 16px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text);
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.2s;
+    z-index: 100;
+    pointer-events: none;
+  }
+
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.success { border-color: var(--accent-dim); color: var(--accent); }
+  .toast.error { border-color: var(--red); color: var(--red); }
+
+  /* MODE TABS */
+  .mode-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .mode-tab {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 8px 14px;
+    cursor: pointer;
+    color: var(--text-dim);
+    border: none;
+    background: transparent;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.15s;
+  }
+
+  .mode-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .mode-tab:hover:not(.active) { color: var(--text); }
+
+  .author-chip {
+    display: inline-block;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo">RefManager</div>
+    <div class="tagline">// bibtex pipeline</div>
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-val" id="stat-total">0</div>
+        <div class="stat-label">refs</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" id="stat-enriched">—</div>
+        <div class="stat-label">enriched</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="main">
+    <!-- LEFT: INPUT PANEL -->
+    <div class="left-panel">
+      <div class="mode-tabs">
+        <button class="mode-tab active" data-mode="bibtex">BibTeX</button>
+        <button class="mode-tab" data-mode="title">Titles</button>
+      </div>
+
+      <div class="panel-header">
+        Input <span id="char-count">0 chars</span>
+      </div>
+
+      <textarea id="bibtex-input" placeholder="@article{smith2024,
+  author = {Smith, John},
+  title  = {Deep Learning for Energy Systems},
+  journal = {Applied Energy},
+  year   = {2024},
+  doi    = {10.1000/xyz}
+}
+
+Paste one or more BibTeX entries..."></textarea>
+
+      <div class="options-row">
+        <div class="toggle-group">
+          <label class="toggle">
+            <input type="checkbox" id="opt-enrich">
+            <div class="toggle-pill"></div>
+            <span class="toggle-label">Crossref</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="opt-abbreviate">
+            <div class="toggle-pill"></div>
+            <span class="toggle-label">Abbreviate</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="opt-protect">
+            <div class="toggle-pill"></div>
+            <span class="toggle-label">Protect caps</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="opt-save">
+            <div class="toggle-pill"></div>
+            <span class="toggle-label">Save to DB</span>
+          </label>
+        </div>
+
+        <div class="file-row">
+          <span class="file-label">.tex file</span>
+          <div class="file-input-wrap">
+            <input type="file" id="latex-file" accept=".tex">
+            <div class="file-display" id="file-display">no file selected</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-row">
+        <button class="btn btn-primary" id="process-btn" onclick="processRefs()">Process</button>
+        <button class="btn btn-ghost" onclick="clearInput()" title="Clear input">↺</button>
+        <button class="btn btn-danger" onclick="clearAll()" title="Clear all results">✕</button>
+      </div>
+    </div>
+
+    <!-- RIGHT: RESULTS PANEL -->
+    <div class="right-panel">
+      <div class="loading-bar" id="loading-bar">
+        <div class="loading-fill"></div>
+      </div>
+
+      <div class="right-toolbar">
+        <span class="panel-label">References</span>
+        <span class="count-badge" id="ref-count">0 entries</span>
+        <div class="toolbar-right">
+          <button class="btn btn-ghost" onclick="copyAll()" id="copy-all-btn" style="display:none">Copy all BibTeX</button>
+          <button class="btn btn-ghost" onclick="exportBib()" id="export-btn" style="display:none">Export .bib</button>
+        </div>
+      </div>
+
+      <div class="refs-header" id="refs-header" style="display:none">
+        <div class="col-head">#</div>
+        <div class="col-head">Year / Author</div>
+        <div class="col-head">Title</div>
+        <div class="col-head">Journal</div>
+        <div class="col-head">BibKey</div>
+      </div>
+
+      <div class="refs-list" id="refs-list">
+        <div class="empty-state" id="empty-state">
+          <div class="empty-icon">⌗</div>
+          <div>paste bibtex and press process</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let processedData = [];
+let currentMode = 'bibtex';
+
+// MODE TABS
+document.querySelectorAll('.mode-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentMode = tab.dataset.mode;
+    const ta = document.getElementById('bibtex-input');
+    if (currentMode === 'title') {
+      ta.placeholder = 'Deep Learning for Energy Systems\nNeural Networks for Battery Management\n...\n\nOne title per line';
+    } else {
+      ta.placeholder = '@article{smith2024,\n  author = {Smith, John},\n  title  = {Deep Learning for Energy Systems},\n  journal = {Applied Energy},\n  year   = {2024},\n  doi    = {10.1000/xyz}\n}\n\nPaste one or more BibTeX entries...';
+    }
+  });
+});
+
+// CHAR COUNT
+document.getElementById('bibtex-input').addEventListener('input', function() {
+  const len = this.value.length;
+  document.getElementById('char-count').textContent = len.toLocaleString() + ' chars';
+});
+
+// FILE LABEL
+document.getElementById('latex-file').addEventListener('change', function() {
+  const display = document.getElementById('file-display');
+  if (this.files.length > 0) {
+    display.textContent = this.files[0].name;
+    display.classList.add('has-file');
+  } else {
+    display.textContent = 'no file selected';
+    display.classList.remove('has-file');
+  }
+});
+
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type + ' show';
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function setLoading(v) {
+  document.getElementById('loading-bar').classList.toggle('active', v);
+  document.getElementById('process-btn').disabled = v;
+  document.getElementById('process-btn').textContent = v ? 'Processing…' : 'Process';
+}
+
+async function processRefs() {
+  const content = document.getElementById('bibtex-input').value.trim();
+  if (!content) { showToast('No input provided', 'error'); return; }
+
+  setLoading(true);
+
+  const formData = new FormData();
+  formData.append('bibtex_content', content);
+  formData.append('input_mode', currentMode);
+  formData.append('enrich', document.getElementById('opt-enrich').checked);
+  formData.append('abbreviate', document.getElementById('opt-abbreviate').checked);
+  formData.append('protect', document.getElementById('opt-protect').checked);
+  formData.append('save_to_db', document.getElementById('opt-save').checked);
+
+  const latexFile = document.getElementById('latex-file').files[0];
+  if (latexFile) formData.append('latex_file', latexFile);
+
+  try {
+    const res = await fetch('/api/process', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      showToast(data.error || 'Processing failed', 'error');
+      setLoading(false);
+      return;
     }
 
-def parse_bibtex_input(bibtex_content):
-    """Parse BibTeX content from user input"""
-    entries = ["@" + e for e in bibtex_content.split("@") if e.strip()]
-    papers = []
-
-    for entry in entries:
-        parsed = parse_bibtex_entry(entry)
-        if not parsed:
-            continue
-
-        fields = parsed['fields']
-
-        papers.append({
-            "Key": parsed['key'],
-            "Type": parsed['type'],
-            "Authors": fields.get("author", "").strip(),
-            "Title": fields.get("title", "").strip(),
-            "Journal/Booktitle": fields.get("journal", fields.get("booktitle", "")).strip(),
-            "Year": fields.get("year", "").strip(),
-            "Publisher": fields.get("publisher", fields.get("organization", "")).strip(),
-            "Volume": fields.get("volume", "").strip(),
-            "Pages": fields.get("pages", "").strip(),
-            "DOI": fields.get("doi", "").strip(),
-            "BibTeX": entry.strip(),
-            "Imported_Date": datetime.now().isoformat()
-        })
-
-    return pd.DataFrame(papers).drop_duplicates(subset="Key", keep="first").reset_index(drop=True)
-
-def clean_bibtex_fields(bibtex):
-    """Remove unwanted fields from BibTeX entries"""
-    if not bibtex:
-        return bibtex
-
-    fields_to_remove = ['url', 'source', 'publication_stage', 'note', 'abstract']
-
-    for field in fields_to_remove:
-        pattern = rf'\s*{field}\s*=\s*'
-        pos = 0
-        result = []
-
-        while pos < len(bibtex):
-            match = re.search(pattern, bibtex[pos:], re.IGNORECASE)
-            if not match:
-                result.append(bibtex[pos:])
-                break
-
-            result.append(bibtex[pos:pos + match.start()])
-            value_start = pos + match.end()
-            _, value_end = scan_brace_balanced_value(bibtex, value_start)
-
-            while value_end < len(bibtex) and bibtex[value_end] in ' \t\n\r,':
-                value_end += 1
-
-            pos = value_end
-
-        bibtex = ''.join(result)
-
-    bibtex = re.sub(r'\n\s*\n\s*\n', '\n\n', bibtex)
-    bibtex = re.sub(r',\s*,', ',', bibtex)
-    bibtex = re.sub(r',(\s*)\}', r'\1}', bibtex)
-
-    lines = [line for line in bibtex.split('\n') if line.strip()]
-    return '\n'.join(lines)
-
-def protect_acronyms_in_fields(bibtex):
-    """Protect acronyms with braces"""
-    if not bibtex:
-        return bibtex
-
-    def wrap_token(token):
-        if token.startswith("{") and token.endswith("}"):
-            return token
-        if sum(1 for c in token if c.isupper()) >= 2:
-            return "{" + token + "}"
-        return token
-
-    def process_field_value(value):
-        if value.startswith("{") and value.endswith("}"):
-            inner = value[1:-1]
-            if not ('{' in inner and '}' in inner):
-                return value
-
-        tokens = re.split(r'(\s+)', value)
-        fixed = "".join(wrap_token(tok) if tok.strip() else tok for tok in tokens)
-        fixed = re.sub(r'\{\{([^{}]+)\}\}', r'{\1}', fixed)
-        return fixed
-
-    for field in ["title", "booktitle", "journal"]:
-        pattern = rf'({field}\s*=\s*)'
-        matches = list(re.finditer(pattern, bibtex, re.IGNORECASE))
-
-        for match in reversed(matches):
-            field_start = match.end()
-            value, value_end = scan_brace_balanced_value(bibtex, field_start)
-
-            if value:
-                processed = process_field_value(value)
-                new_field = f"{match.group(1)}{{{processed}}}"
-                bibtex = bibtex[:match.start()] + new_field + bibtex[value_end:]
-
-    return bibtex
-
-def replace_bibtex_key(bibtex, new_key):
-    """Replace the citation key in a BibTeX entry"""
-    if not bibtex:
-        return bibtex
-
-    try:
-        start_brace = bibtex.index("{")
-        first_comma = bibtex.index(",", start_brace)
-        entry_type = bibtex[:start_brace]
-        new_start = f"{entry_type}{{{new_key},"
-        return new_start + bibtex[first_comma + 1:]
-    except ValueError:
-        return bibtex
-
-def enrich_with_crossref(df):
-    """Enrich references with Crossref data"""
-    enriched_rows = []
-
-    for idx, row in df.iterrows():
-        enriched_data = dict(row)
-
-        if not row.get('Title'):
-            enriched_data['Crossref_BibTeX'] = row.get('BibTeX', '')
-            enriched_data['Title_Similarity'] = 0
-            enriched_rows.append(enriched_data)
-            continue
-
-        query_parts = [row['Title']]
-        if row.get('Authors'):
-            query_parts.append(row['Authors'].split(',')[0])
-        if row.get('Journal/Booktitle'):
-            query_parts.append(row['Journal/Booktitle'])
-        if row.get('Year'):
-            query_parts.append(row['Year'])
-
-        query = " ".join(query_parts)
-
-        try:
-            url = f"https://api.crossref.org/works?query.bibliographic={requests.utils.quote(query)}&rows=3"
-            response = HTTP.get(url, timeout=15)
-            response.raise_for_status()
-            items = response.json().get("message", {}).get("items", [])
-
-            best_score = 0
-            crossref_bibtex = row.get('BibTeX', '')
-            best_doi = row.get('DOI', '')
-
-            for item in items:
-                cr_title = item.get("title", [""])[0]
-                score = SequenceMatcher(None, row['Title'].lower(), cr_title.lower()).ratio()
-
-                if row.get('Year') and 'published-print' in item:
-                    cr_year = str(item['published-print'].get('date-parts', [['']])[0][0])
-                    if row['Year'].strip() == cr_year:
-                        score = min(1.0, score + 0.1)
-
-                if score > best_score:
-                    best_score = score
-                    best_doi = item.get('DOI', best_doi)
-
-                    if best_doi:
-                        try:
-                            bibtex_response = HTTP.get(
-                                f"https://doi.org/{best_doi}",
-                                headers={"Accept": "application/x-bibtex"},
-                                timeout=15
-                            )
-                            if bibtex_response.status_code == 200:
-                                crossref_bibtex = bibtex_response.text.strip()
-                        except Exception as e:
-                            print(f"⚠️ BibTeX fetch failed for DOI {best_doi}: {e}")
-
-            enriched_data['Crossref_BibTeX'] = crossref_bibtex if best_score >= 0.85 else row.get('BibTeX', '')
-            enriched_data['Title_Similarity'] = int(round(best_score * 100))
-            if best_doi:
-                enriched_data['DOI'] = best_doi
-
-        except Exception as e:
-            print(f"⚠️ Crossref enrichment failed: {e}")
-            enriched_data['Crossref_BibTeX'] = row.get('BibTeX', '')
-            enriched_data['Title_Similarity'] = 0
-
-        time.sleep(0.15 + random.uniform(0, 0.25))
-        enriched_rows.append(enriched_data)
-
-    return pd.DataFrame(enriched_rows)
-
-def add_journal_abbreviations(df):
-    """Add journal abbreviations and create all BibTeX versions"""
-    abbreviated_rows = []
-
-    for idx, row in df.iterrows():
-        journal = row.get('Journal/Booktitle', '')
-        journal_abbrev = abbreviate_journal_custom(journal)
-
-        row_data = dict(row)
-        row_data['Journal_Abbreviation'] = journal_abbrev
-
-        key_to_use = row_data.get('Key') or row_data.get('Reference') or f"ref_{idx}"
-
-        if row_data.get('Crossref_BibTeX'):
-            row_data['Crossref_BibTeX_LocalKey'] = replace_bibtex_key(
-                row_data['Crossref_BibTeX'],
-                key_to_use
-            )
-        else:
-            row_data['Crossref_BibTeX_LocalKey'] = row_data.get('BibTeX', '')
-
-        if journal_abbrev and row_data.get('Crossref_BibTeX_LocalKey'):
-            new_bib = row_data['Crossref_BibTeX_LocalKey'].strip()
-            new_bib = re.sub(
-                r'(journal\s*=\s*\{)[^}]+(\})',
-                rf'\1{journal_abbrev}\2',
-                new_bib,
-                flags=re.IGNORECASE
-            )
-            row_data['Crossref_BibTeX_Abbrev'] = new_bib
-        else:
-            row_data['Crossref_BibTeX_Abbrev'] = row_data.get('Crossref_BibTeX_LocalKey', row_data.get('BibTeX', ''))
-
-        row_data['Crossref_BibTeX_Protected'] = protect_acronyms_in_fields(
-            row_data.get('Crossref_BibTeX_Abbrev', row_data.get('BibTeX', ''))
-        )
-
-        for bib_col in ['BibTeX', 'Crossref_BibTeX', 'Crossref_BibTeX_LocalKey',
-                        'Crossref_BibTeX_Abbrev', 'Crossref_BibTeX_Protected']:
-            if row_data.get(bib_col):
-                row_data[bib_col] = clean_bibtex_fields(row_data[bib_col])
-
-        abbreviated_rows.append(row_data)
-
-    return pd.DataFrame(abbreviated_rows)
-
-# =====================================================================
-# ROUTES
-# =====================================================================
-
-@app.route('/')
-def index():
-    """Main page — falls back to JSON status if template is missing"""
-    try:
-        return render_template('index.html')
-    except Exception:
-        return jsonify({'status': 'running', 'message': 'Reference Management API is live. No index.html found in templates/.'}), 200
-
-@app.route('/api/process', methods=['POST'])
-def process_bibtex():
-    """Process BibTeX content with optional LaTeX analysis"""
-    if not check_api_key():
-        return jsonify({'error': 'Unauthorized'}), 401
-
-    try:
-        if request.is_json:
-            data = request.get_json()
-            bibtex_content = data.get('bibtex_content') or data.get('bibtex', '')
-            input_mode = data.get('input_mode', 'bibtex')
-            enrich = data.get('enrich', False)
-            abbreviate = data.get('abbreviate', False)
-            protect = data.get('protect', False)
-            save_to_db = data.get('save_to_db', False)
-            latex_file = None
-        else:
-            bibtex_content = request.form.get('bibtex_content', '')
-            input_mode = request.form.get('input_mode', 'bibtex')
-            enrich = request.form.get('enrich', 'false').lower() == 'true'
-            abbreviate = request.form.get('abbreviate', 'false').lower() == 'true'
-            protect = request.form.get('protect', 'false').lower() == 'true'
-            save_to_db = request.form.get('save_to_db', 'false').lower() == 'true'
-            latex_file = request.files.get('latex_file')
-
-        print(f"📥 Received: {len(bibtex_content)} chars, mode={input_mode}")
-
-        # TITLE MODE: Search Crossref for each title
-        if input_mode == 'title':
-            titles = [line.strip() for line in bibtex_content.split('\n') if line.strip()]
-            print(f"🔍 Title mode: searching for {len(titles)} titles")
-
-            if not titles:
-                return jsonify({'error': 'No titles provided'}), 400
-
-            bibtex_entries = []
-            for i, title in enumerate(titles, 1):
-                print(f"  [{i}/{len(titles)}] Searching: {title[:50]}...")
-                try:
-                    url = f"https://api.crossref.org/works?query.bibliographic={requests.utils.quote(title)}&rows=1"
-                    response = HTTP.get(url, timeout=15)
-                    items = response.json().get("message", {}).get("items", [])
-
-                    if items and items[0].get('DOI'):
-                        doi = items[0]['DOI']
-                        bibtex_r = HTTP.get(
-                            f"https://doi.org/{doi}",
-                            headers={"Accept": "application/x-bibtex"},
-                            timeout=15
-                        )
-                        if bibtex_r.status_code == 200:
-                            bibtex_entries.append(bibtex_r.text.strip())
-                            print(f"    ✅ Found via DOI: {doi}")
-
-                    time.sleep(random.uniform(1, 2))
-                except Exception as e:
-                    print(f"    ⚠️ Failed: {e}")
-
-            bibtex_content = '\n\n'.join(bibtex_entries)
-            print(f"✅ Retrieved {len(bibtex_entries)} BibTeX entries from titles")
-
-            if not bibtex_content:
-                return jsonify({'error': 'No BibTeX entries found for the provided titles'}), 400
-
-        if not bibtex_content or len(bibtex_content.strip()) == 0:
-            return jsonify({'error': 'No BibTeX content provided'}), 400
-
-        df = parse_bibtex_input(bibtex_content)
-
-        if df.empty:
-            return jsonify({'error': 'No valid BibTeX entries found'}), 400
-
-        latex_analyzed = False
-        citations_found = 0
-        if latex_file:
-            print("📄 LaTeX file provided, analyzing...")
-            try:
-                latex_content = latex_file.read().decode('utf-8')
-                citations_df = parse_citations_from_tex(latex_content)
-                citations_found = len(citations_df)
-                df = merge_citations_with_bib(citations_df, df)
-                df.insert(0, "Index", range(1, len(df) + 1))
-                latex_analyzed = True
-                print(f"✅ LaTeX analyzed: {citations_found} citations found")
-            except Exception as e:
-                print(f"⚠️ LaTeX analysis failed: {e}")
-
-        if enrich:
-            df = enrich_with_crossref(df)
-        else:
-            df['Crossref_BibTeX'] = df['BibTeX']
-            df['Title_Similarity'] = 0
-
-        df = add_journal_abbreviations(df)
-
-        db_id = None
-        if save_to_db:
-            conn = get_db_connection()
-            cursor = conn.cursor()
-            session_id = datetime.now().isoformat()
-
-            for _, row in df.iterrows():
-                doi = row.get('DOI', '').strip()
-                year_int = extract_year_int(row.get('Year', ''))
-                key_val = row.get('Reference') or row.get('Key', f"ref_{row.name}")
-
-                try:
-                    cursor.execute('''
-                        INSERT OR REPLACE INTO bibliography
-                        (index_num, session_id, reference, frequency, sections, key, doi, type,
-                         authors, title, journal_booktitle, year, year_int, publisher, volume, pages,
-                         bibtex, crossref_bibtex, crossref_bibtex_localkey, title_similarity,
-                         journal_abbreviation, crossref_bibtex_abbrev, crossref_bibtex_protected,
-                         imported_date)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ''', (
-                        row.get('Index'), session_id, row.get('Reference', key_val),
-                        row.get('Frequency', 0), row.get('Sections', ''),
-                        key_val, doi, row.get('Type', ''), row.get('Authors', ''),
-                        row.get('Title', ''), row.get('Journal/Booktitle', ''),
-                        row.get('Year', ''), year_int, row.get('Publisher', ''),
-                        row.get('Volume', ''), row.get('Pages', ''),
-                        row.get('BibTeX', ''), row.get('Crossref_BibTeX', ''),
-                        row.get('Crossref_BibTeX_LocalKey', ''),
-                        row.get('Title_Similarity', 0), row.get('Journal_Abbreviation', ''),
-                        row.get('Crossref_BibTeX_Abbrev', ''),
-                        row.get('Crossref_BibTeX_Protected', ''),
-                        datetime.now().isoformat()
-                    ))
-                except sqlite3.IntegrityError as e:
-                    print(f"⚠️ DB insert failed for {key_val}: {e}")
-
-            conn.commit()
-            db_id = session_id
-            conn.close()
-
-        if protect:
-            final_bibtex_col = 'Crossref_BibTeX_Protected'
-        elif abbreviate:
-            final_bibtex_col = 'Crossref_BibTeX_Abbrev'
-        else:
-            final_bibtex_col = 'Crossref_BibTeX_LocalKey'
-
-        response_cols = ['Key', 'Type', 'Authors', 'Title', 'Journal/Booktitle', 'Year', final_bibtex_col]
-        if latex_analyzed:
-            response_cols.insert(6, 'Frequency')
-            response_cols.insert(7, 'Sections')
-
-        response_df = df[[col for col in response_cols if col in df.columns]].copy()
-        response_df.columns = list(response_df.columns[:-1]) + ['Final_BibTeX']
-
-        return jsonify({
-            'success': True,
-            'count': len(df),
-            'db_id': db_id,
-            'latex_analyzed': latex_analyzed,
-            'citations_found': citations_found,
-            'data': response_df.to_dict(orient='records'),
-            'full_data': df.to_dict(orient='records')
-        })
-
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/sections/list', methods=['GET'])
-def list_sections():
-    """Get list of all unique sections from database"""
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute('SELECT DISTINCT sections FROM bibliography WHERE sections IS NOT NULL AND sections != ""')
-        rows = cursor.fetchall()
-        conn.close()
-
-        all_sections = set()
-        for row in rows:
-            if row[0]:
-                sections = [s.strip() for s in row[0].split(',')]
-                all_sections.update(sections)
-
-        return jsonify({
-            'success': True,
-            'sections': sorted(list(all_sections))
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/sections/references', methods=['GET'])
-def get_references_by_section():
-    """Get all references for a specific section"""
-    section = request.args.get('section', '')
-
-    if not section:
-        return jsonify({'error': 'Section parameter required'}), 400
-
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute('''
-            SELECT key, title, authors, year, frequency, sections, reference
-            FROM bibliography
-            WHERE sections LIKE ?
-        ''', (f'%{section}%',))
-
-        rows = cursor.fetchall()
-        conn.close()
-
-        references = []
-        for row in rows:
-            sections_list = [s.strip() for s in row[5].split(',') if s.strip()]
-            if section in sections_list:
-                total_freq = row[4] or 0
-                num_sections = len(sections_list)
-                freq_in_section = total_freq // num_sections if num_sections > 0 else total_freq
-
-                references.append({
-                    'key': row[0],
-                    'title': row[1],
-                    'authors': row[2],
-                    'year': row[3],
-                    'frequency_in_section': freq_in_section,
-                    'total_frequency': total_freq,
-                    'all_sections': row[5]
-                })
-
-        return jsonify({
-            'success': True,
-            'section': section,
-            'references': references
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/database/entries', methods=['GET'])
-def get_database_entries():
-    """Get all entries from database"""
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute('SELECT * FROM bibliography ORDER BY created_at DESC LIMIT 100')
-        columns = [description[0] for description in cursor.description]
-        entries = [dict(zip(columns, row)) for row in cursor.fetchall()]
-        conn.close()
-
-        return jsonify({
-            'success': True,
-            'count': len(entries),
-            'entries': entries
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/database/delete/<key>', methods=['DELETE'])
-def delete_entry(key):
-    """Delete entry from database"""
-    if not check_api_key():
-        return jsonify({'error': 'Unauthorized'}), 401
-
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute('DELETE FROM bibliography WHERE key=?', (key,))
-        conn.commit()
-        conn.close()
-        return jsonify({'success': True})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/database/clear', methods=['POST'])
-def clear_database():
-    """Clear all entries from database"""
-    if not check_api_key():
-        return jsonify({'error': 'Unauthorized'}), 401
-
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute('DELETE FROM bibliography')
-        deleted_count = cursor.rowcount
-        # Reset autoincrement counter safely
-        try:
-            cursor.execute('DELETE FROM sqlite_sequence WHERE name="bibliography"')
-        except sqlite3.OperationalError:
-            pass  # sqlite_sequence may not exist if no rows were ever inserted
-        conn.commit()
-        conn.close()
-
-        print(f"🗑️ Cleared {deleted_count} entries from database")
-
-        return jsonify({
-            'success': True,
-            'deleted_count': deleted_count,
-            'message': f'Successfully cleared {deleted_count} entries from database'
-        })
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/database/export', methods=['GET'])
-def export_database():
-    """Export database as CSV"""
-    try:
-        conn = get_db_connection()
-        df = pd.read_sql_query('SELECT * FROM bibliography', conn)
-        conn.close()
-
-        output = io.StringIO()
-        df.to_csv(output, index=False)
-        output.seek(0)
-
-        return send_file(
-            io.BytesIO(output.getvalue().encode()),
-            mimetype='text/csv',
-            as_attachment=True,
-            download_name='references_export.csv'
-        )
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/database/export-bibtex', methods=['GET'])
-def export_bibtex():
-    """Export database as BibTeX"""
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute('SELECT key, crossref_bibtex_protected FROM bibliography ORDER BY key')
-        bibtex_content = '\n\n'.join([row[1] for row in cursor.fetchall() if row[1]])
-        conn.close()
-
-        return send_file(
-            io.BytesIO(bibtex_content.encode()),
-            mimetype='text/plain',
-            as_attachment=True,
-            download_name='references.bib'
-        )
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/database/download', methods=['GET'])
-def download_database():
-    """Download entire database file"""
-    try:
-        return send_file(
-            app.config['DATABASE'],
-            mimetype='application/x-sqlite3',
-            as_attachment=True,
-            download_name='refs_management.db'
-        )
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/stats', methods=['GET'])
-def get_stats():
-    """Get database statistics"""
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        cursor.execute('SELECT COUNT(*) FROM bibliography')
-        total = cursor.fetchone()[0]
-
-        cursor.execute('SELECT COUNT(DISTINCT type) FROM bibliography')
-        types = cursor.fetchone()[0]
-
-        cursor.execute('SELECT COUNT(DISTINCT year_int) FROM bibliography WHERE year_int IS NOT NULL')
-        years = cursor.fetchone()[0]
-
-        conn.close()
-
-        return jsonify({
-            'total_entries': total,
-            'entry_types': types,
-            'unique_years': years
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# =====================================================================
-# INIT DB AT MODULE LEVEL — required for gunicorn / HuggingFace Spaces
-# =====================================================================
-init_db()
-
-if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0', port=7860)
+    processedData = data.full_data || data.data || [];
+    renderRefs(processedData);
+    document.getElementById('stat-total').textContent = processedData.length;
+
+    const enriched = processedData.filter(r => r.Title_Similarity > 80).length;
+    document.getElementById('stat-enriched').textContent =
+      document.getElementById('opt-enrich').checked ? enriched : '—';
+
+    showToast(`Processed ${processedData.length} references`);
+  } catch (e) {
+    showToast('Network error: ' + e.message, 'error');
+  }
+  setLoading(false);
+}
+
+function getFirstAuthor(authors) {
+  if (!authors) return '—';
+  const parts = authors.split(/,|and/);
+  const first = parts[0].trim();
+  const nameParts = first.split(/\s+/);
+  return nameParts[nameParts.length - 1];
+}
+
+function getBestBib(row) {
+  return row.Crossref_BibTeX_Protected
+    || row.Crossref_BibTeX_Abbrev
+    || row.Crossref_BibTeX_LocalKey
+    || row.Crossref_BibTeX
+    || row.BibTeX
+    || '';
+}
+
+function renderRefs(refs) {
+  const list = document.getElementById('refs-list');
+  const header = document.getElementById('refs-header');
+  const empty = document.getElementById('empty-state');
+  const copyBtn = document.getElementById('copy-all-btn');
+  const exportBtn = document.getElementById('export-btn');
+  document.getElementById('ref-count').textContent = refs.length + ' entries';
+
+  if (!refs.length) {
+    list.innerHTML = '';
+    list.appendChild(empty);
+    header.style.display = 'none';
+    copyBtn.style.display = 'none';
+    exportBtn.style.display = 'none';
+    return;
+  }
+
+  header.style.display = 'grid';
+  copyBtn.style.display = 'inline-block';
+  exportBtn.style.display = 'inline-block';
+
+  list.innerHTML = refs.map((r, i) => {
+    const key = r.Key || r.Reference || '—';
+    const year = r.Year || '—';
+    const author = getFirstAuthor(r.Authors);
+    const title = r.Title || '—';
+    const journal = r['Journal/Booktitle'] || r.Journal_Booktitle || '—';
+    const bib = getBestBib(r);
+
+    return `
+      <div class="ref-row" onclick="toggleBib(${i})" id="row-${i}">
+        <div class="ref-cell cell-idx">${i + 1}</div>
+        <div class="ref-cell cell-year"><div>${year}</div><div class="author-chip">${author}</div></div>
+        <div class="ref-cell cell-title">${escHtml(title)}</div>
+        <div class="ref-cell cell-journal">${escHtml(journal)}</div>
+        <div class="ref-cell cell-key">${escHtml(key)}</div>
+      </div>
+      <div class="bibtex-row" id="bib-${i}">
+        <div class="bibtex-content" id="bib-content-${i}">${escHtml(bib)}<button class="copy-inline-btn" id="copy-btn-${i}" onclick="copyBib(event,${i})">copy</button></div>
+      </div>`;
+  }).join('');
+}
+
+function toggleBib(i) {
+  const row = document.getElementById(`row-${i}`);
+  const bib = document.getElementById(`bib-${i}`);
+  const isOpen = bib.classList.contains('open');
+  // close all others
+  document.querySelectorAll('.bibtex-row.open').forEach(el => {
+    el.classList.remove('open');
+    const idx = el.id.replace('bib-', '');
+    document.getElementById(`row-${idx}`).classList.remove('expanded');
+  });
+  if (!isOpen) {
+    bib.classList.add('open');
+    row.classList.add('expanded');
+  }
+}
+
+function copyBib(e, i) {
+  e.stopPropagation();
+  const bib = getBestBib(processedData[i]);
+  navigator.clipboard.writeText(bib).then(() => {
+    const btn = document.getElementById(`copy-btn-${i}`);
+    btn.textContent = 'copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 1500);
+  });
+}
+
+function copyAll() {
+  const all = processedData.map(r => getBestBib(r)).filter(Boolean).join('\n\n');
+  navigator.clipboard.writeText(all).then(() => showToast('Copied ' + processedData.length + ' entries'));
+}
+
+function exportBib() {
+  const all = processedData.map(r => getBestBib(r)).filter(Boolean).join('\n\n');
+  const blob = new Blob([all], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'references.bib';
+  a.click();
+  showToast('Exported references.bib');
+}
+
+function clearInput() {
+  document.getElementById('bibtex-input').value = '';
+  document.getElementById('char-count').textContent = '0 chars';
+}
+
+function clearAll() {
+  processedData = [];
+  renderRefs([]);
+  document.getElementById('stat-total').textContent = '0';
+  document.getElementById('stat-enriched').textContent = '—';
+  const empty = document.getElementById('empty-state');
+  document.getElementById('refs-list').appendChild(empty);
+  showToast('Cleared');
+}
+
+function escHtml(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
