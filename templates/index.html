@@ -34,73 +34,41 @@
     min-height: 100vh;
   }
 
-  .app {
-    display: grid;
-    grid-template-rows: auto 1fr;
-    height: 100vh;
-    overflow: hidden;
-  }
+  .app { display: grid; grid-template-rows: auto 1fr; height: 100vh; overflow: hidden; }
 
   header {
-    padding: 12px 24px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    background: var(--surface);
+    padding: 12px 24px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 16px; background: var(--surface);
   }
-
-  header .logo {
-    font-family: var(--mono);
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--accent);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  header .tagline { color: var(--text-faint); font-size: 11px; font-family: var(--mono); }
-
-  .header-stats { margin-left: auto; display: flex; gap: 16px; align-items: center; }
-
-  .verified-pills { display: flex; gap: 8px; align-items: center; }
-  .vpill {
-    font-family: var(--mono); font-size: 10px; padding: 3px 9px; border-radius: 10px;
-    display: flex; align-items: center; gap: 4px;
-  }
-  .vpill-green { background: rgba(110,240,160,0.1); border: 1px solid rgba(110,240,160,0.25); color: var(--green); }
-  .vpill-yellow { background: rgba(240,200,74,0.1); border: 1px solid rgba(240,200,74,0.25); color: var(--yellow); }
-  .vpill-red { background: rgba(255,95,95,0.1); border: 1px solid rgba(255,95,95,0.25); color: var(--red); }
-
+  .logo { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase; }
+  .tagline { color: var(--text-faint); font-size: 11px; font-family: var(--mono); }
+  .header-stats { margin-left: auto; display: flex; gap: 14px; align-items: center; }
+  .vpills { display: flex; gap: 7px; }
+  .vpill { font-family: var(--mono); font-size: 10px; padding: 3px 9px; border-radius: 10px; display: flex; align-items: center; gap: 4px; }
+  .vpill-green  { background: rgba(110,240,160,0.1); border: 1px solid rgba(110,240,160,0.25); color: var(--green); }
+  .vpill-yellow { background: rgba(240,200,74,0.1);  border: 1px solid rgba(240,200,74,0.25);  color: var(--yellow); }
+  .vpill-red    { background: rgba(255,95,95,0.1);   border: 1px solid rgba(255,95,95,0.25);   color: var(--red); }
   .stat { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
   .stat-val { font-family: var(--mono); font-size: 15px; font-weight: 600; color: var(--accent); line-height: 1; }
   .stat-label { font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
 
-  /* LAYOUT */
-  .main { display: grid; grid-template-columns: 360px 1fr; overflow: hidden; }
+  .main { display: grid; grid-template-columns: 340px 1fr; overflow: hidden; }
 
-  /* LEFT PANEL */
-  .left-panel {
-    border-right: 1px solid var(--border);
-    display: flex; flex-direction: column; overflow: hidden;
-    background: var(--surface);
-  }
+  /* LEFT */
+  .left-panel { border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; background: var(--surface); }
 
   .mode-tabs { display: flex; border-bottom: 1px solid var(--border); }
   .mode-tab {
-    font-family: var(--mono); font-size: 10px; text-transform: uppercase;
-    letter-spacing: 0.08em; padding: 8px 14px; cursor: pointer;
-    color: var(--text-dim); border: none; background: transparent;
+    font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
+    padding: 8px 14px; cursor: pointer; color: var(--text-dim); border: none; background: transparent;
     border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s;
   }
   .mode-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
   .mode-tab:hover:not(.active) { color: var(--text); }
 
   .panel-header {
-    padding: 10px 16px 8px;
-    border-bottom: 1px solid var(--border);
-    font-family: var(--mono); font-size: 10px;
-    text-transform: uppercase; letter-spacing: 0.1em;
+    padding: 10px 16px 8px; border-bottom: 1px solid var(--border);
+    font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em;
     color: var(--text-dim); display: flex; align-items: center; justify-content: space-between;
   }
   .panel-header span { color: var(--accent); }
@@ -114,24 +82,12 @@
   textarea::-webkit-scrollbar { width: 4px; }
   textarea::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-  .options-row {
-    padding: 10px 16px; border-top: 1px solid var(--border);
-    display: flex; flex-direction: column; gap: 9px;
-  }
-
+  .options-row { padding: 10px 16px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 9px; }
   .toggle-group { display: flex; gap: 10px; flex-wrap: wrap; }
-
   .toggle { display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
   .toggle input { display: none; }
-  .toggle-pill {
-    width: 28px; height: 15px; background: var(--border); border-radius: 8px;
-    position: relative; transition: background 0.2s;
-  }
-  .toggle-pill::after {
-    content: ''; position: absolute; width: 11px; height: 11px;
-    background: var(--text-dim); border-radius: 50%; top: 2px; left: 2px;
-    transition: left 0.2s, background 0.2s;
-  }
+  .toggle-pill { width: 28px; height: 15px; background: var(--border); border-radius: 8px; position: relative; transition: background 0.2s; }
+  .toggle-pill::after { content: ''; position: absolute; width: 11px; height: 11px; background: var(--text-dim); border-radius: 50%; top: 2px; left: 2px; transition: left 0.2s, background 0.2s; }
   .toggle input:checked ~ .toggle-pill { background: var(--accent-dim); }
   .toggle input:checked ~ .toggle-pill::after { left: 15px; background: var(--accent); }
   .toggle-label { font-size: 11px; color: var(--text-dim); font-family: var(--mono); }
@@ -140,23 +96,12 @@
   .file-label { font-size: 11px; color: var(--text-dim); font-family: var(--mono); white-space: nowrap; }
   .file-input-wrap { flex: 1; position: relative; overflow: hidden; }
   .file-input-wrap input[type="file"] { position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
-  .file-display {
-    font-family: var(--mono); font-size: 10px; color: var(--text-faint);
-    background: var(--bg); border: 1px solid var(--border); border-radius: 3px;
-    padding: 4px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer;
-  }
+  .file-display { font-family: var(--mono); font-size: 10px; color: var(--text-faint); background: var(--bg); border: 1px solid var(--border); border-radius: 3px; padding: 4px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
   .file-display.has-file { color: var(--accent); border-color: var(--accent-dim); }
 
-  .action-row {
-    padding: 10px 16px; border-top: 1px solid var(--border);
-    display: flex; gap: 8px;
-  }
+  .action-row { padding: 10px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
 
-  .btn {
-    font-family: var(--mono); font-size: 11px; font-weight: 600;
-    text-transform: uppercase; letter-spacing: 0.08em;
-    border: none; border-radius: 3px; cursor: pointer; padding: 8px 14px; transition: all 0.15s;
-  }
+  .btn { font-family: var(--mono); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; border: none; border-radius: 3px; cursor: pointer; padding: 8px 14px; transition: all 0.15s; }
   .btn-primary { background: var(--accent); color: #0e0e0e; flex: 1; }
   .btn-primary:hover { background: #d8ff7e; }
   .btn-primary:active { transform: scale(0.98); }
@@ -167,38 +112,20 @@
   .btn-danger:hover { background: #1e0a0a; border-color: var(--red); }
   .btn-sm { padding: 4px 9px; font-size: 10px; }
 
-  /* RIGHT PANEL */
+  /* RIGHT */
   .right-panel { display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
-
   .loading-bar { height: 2px; background: var(--border); display: none; overflow: hidden; flex-shrink: 0; }
   .loading-bar.active { display: block; }
-  .loading-fill { height: 100%; background: var(--accent); animation: load-sweep 1.4s infinite ease-in-out; }
-  @keyframes load-sweep {
-    0% { width: 0; margin-left: 0; }
-    50% { width: 60%; margin-left: 20%; }
-    100% { width: 0; margin-left: 100%; }
-  }
+  .loading-fill { height: 100%; background: var(--accent); animation: sweep 1.4s infinite ease-in-out; }
+  @keyframes sweep { 0%{width:0;margin-left:0} 50%{width:60%;margin-left:20%} 100%{width:0;margin-left:100%} }
 
-  .right-toolbar {
-    padding: 8px 16px; border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; gap: 10px; flex-shrink: 0; flex-wrap: wrap;
-  }
+  .right-toolbar { padding: 8px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-shrink: 0; flex-wrap: wrap; }
   .panel-label { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); }
-  .count-badge {
-    font-family: var(--mono); font-size: 10px; color: var(--accent);
-    background: rgba(200,240,110,0.08); border: 1px solid rgba(200,240,110,0.2);
-    border-radius: 10px; padding: 2px 8px;
-  }
-  .toolbar-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .count-badge { font-family: var(--mono); font-size: 10px; color: var(--accent); background: rgba(200,240,110,0.08); border: 1px solid rgba(200,240,110,0.2); border-radius: 10px; padding: 2px 8px; }
+  .toolbar-right { margin-left: auto; display: flex; gap: 8px; }
 
-  .filter-toggle {
-    display: flex; gap: 0; border: 1px solid var(--border); border-radius: 3px; overflow: hidden;
-  }
-  .ftab {
-    font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em;
-    padding: 4px 9px; cursor: pointer; color: var(--text-dim); background: transparent;
-    border: none; border-right: 1px solid var(--border); transition: all 0.12s;
-  }
+  .filter-toggle { display: flex; border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+  .ftab { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 9px; cursor: pointer; color: var(--text-dim); background: transparent; border: none; border-right: 1px solid var(--border); transition: all 0.12s; }
   .ftab:last-child { border-right: none; }
   .ftab.active { background: var(--border); color: var(--text); }
   .ftab:hover:not(.active) { color: var(--text); }
@@ -206,142 +133,124 @@
   /* TABLE */
   .refs-header, .ref-row {
     display: grid;
-    grid-template-columns: 36px 18px 110px 1fr 120px 120px;
+    grid-template-columns: 36px 18px 58px 130px 1fr 110px 110px;
     border-bottom: 1px solid var(--border);
     align-items: center;
   }
-
-  .refs-header {
-    background: var(--surface); position: sticky; top: 0; z-index: 10; flex-shrink: 0;
-  }
-
-  .col-head {
-    padding: 6px 10px; font-family: var(--mono); font-size: 9px;
-    text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-faint);
-    border-right: 1px solid var(--border);
-  }
+  .refs-header { background: var(--surface); position: sticky; top: 0; z-index: 10; flex-shrink: 0; }
+  .col-head { padding: 6px 8px; font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-faint); border-right: 1px solid var(--border); }
   .col-head:last-child { border-right: none; }
 
-  .ref-row { transition: background 0.1s; cursor: pointer; min-height: 36px; }
+  .ref-row { cursor: pointer; min-height: 36px; transition: background 0.1s; }
   .ref-row:hover { background: rgba(255,255,255,0.02); }
-  .ref-row.expanded { background: rgba(200,240,110,0.03); }
+  .ref-row.selected { background: rgba(200,240,110,0.04); }
 
-  .ref-cell {
-    padding: 7px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    font-size: 12px; border-right: 1px solid var(--border);
-  }
+  .ref-cell { padding: 6px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; border-right: 1px solid var(--border); }
   .ref-cell:last-child { border-right: none; }
 
   .cell-idx { font-family: var(--mono); font-size: 10px; color: var(--text-faint); text-align: center; }
   .cell-status { display: flex; align-items: center; justify-content: center; }
-
-  .status-dot {
-    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; cursor: pointer;
-  }
-  .dot-green { background: var(--green); box-shadow: 0 0 5px rgba(110,240,160,0.5); }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .dot-green  { background: var(--green);  box-shadow: 0 0 5px rgba(110,240,160,0.5); }
   .dot-yellow { background: var(--yellow); box-shadow: 0 0 5px rgba(240,200,74,0.4); }
-  .dot-red { background: var(--red); box-shadow: 0 0 5px rgba(255,95,95,0.4); }
+  .dot-red    { background: var(--red);    box-shadow: 0 0 5px rgba(255,95,95,0.4); }
 
-  .cell-year { font-family: var(--mono); font-size: 11px; color: var(--accent); font-weight: 500; }
-  .author-sub { font-size: 10px; color: var(--text-dim); margin-top: 1px; }
-  .cell-title { color: var(--text); font-size: 12px; }
-  .cell-journal { color: var(--text-dim); font-size: 11px; font-style: italic; }
-  .cell-key { font-family: var(--mono); font-size: 10px; color: var(--text-faint); }
+  .cell-year   { font-family: var(--mono); font-size: 11px; color: var(--accent); font-weight: 500; }
+  .cell-author { font-size: 11px; color: var(--text-dim); }
+  .cell-title  { color: var(--text); font-size: 12px; }
+  .cell-journal{ color: var(--text-dim); font-size: 11px; font-style: italic; }
+  .cell-key    { font-family: var(--mono); font-size: 10px; color: var(--text-faint); }
+
+  .sim-badge { font-family: var(--mono); font-size: 9px; padding: 1px 4px; border-radius: 2px; margin-left: 5px; vertical-align: middle; opacity: 0.8; }
+  .sim-high { background: rgba(110,240,160,0.15); color: var(--green); }
+  .sim-mid  { background: rgba(240,200,74,0.15);  color: var(--yellow); }
+  .sim-low  { background: rgba(255,95,95,0.15);   color: var(--red); }
 
   .refs-list { flex: 1; overflow-y: auto; }
   .refs-list::-webkit-scrollbar { width: 4px; }
   .refs-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-  /* EXPAND PANEL */
-  .expand-panel {
-    display: none; border-bottom: 1px solid var(--border);
-    background: #111; padding: 12px 14px 14px 60px;
+  /* DETAIL PANEL — always visible below selected row */
+  .detail-panel {
+    display: none;
+    border-bottom: 1px solid var(--border);
+    background: #111;
   }
-  .expand-panel.open { display: block; }
+  .detail-panel.open { display: block; }
 
-  .expand-tabs { display: flex; gap: 0; margin-bottom: 10px; border-bottom: 1px solid var(--border); }
-  .etab {
-    font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
-    padding: 5px 12px; cursor: pointer; color: var(--text-dim); background: transparent;
-    border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.12s;
+  .detail-inner {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border-top: 1px solid var(--border);
   }
-  .etab.active { color: var(--accent); border-bottom-color: var(--accent); }
-  .etab:hover:not(.active) { color: var(--text); }
 
-  .bibtex-view {
+  /* LEFT SIDE: current bibtex */
+  .detail-bib {
+    padding: 12px 14px;
+    border-right: 1px solid var(--border);
+  }
+  .detail-section-label {
+    font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--text-faint); margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .bibtex-pre {
     font-family: var(--mono); font-size: 11px; color: var(--text-dim);
     white-space: pre-wrap; line-height: 1.6;
-    border-left: 2px solid var(--border); padding: 8px 12px;
-    max-height: 180px; overflow-y: auto;
+    border-left: 2px solid var(--border); padding: 8px 10px;
     background: rgba(255,255,255,0.02); border-radius: 0 3px 3px 0;
+    max-height: 160px; overflow-y: auto;
   }
-  .bibtex-view.bib-verified { border-left-color: var(--green); }
-  .bibtex-view.bib-uncertain { border-left-color: var(--yellow); }
-  .bibtex-view.bib-incomplete { border-left-color: var(--red); }
-  .bibtex-view::-webkit-scrollbar { width: 3px; }
-  .bibtex-view::-webkit-scrollbar-thumb { background: var(--border); }
+  .bibtex-pre.bib-green  { border-left-color: var(--green); }
+  .bibtex-pre.bib-yellow { border-left-color: var(--yellow); }
+  .bibtex-pre.bib-red    { border-left-color: var(--red); }
+  .bibtex-pre::-webkit-scrollbar { width: 3px; }
+  .bibtex-pre::-webkit-scrollbar-thumb { background: var(--border); }
 
-  .bibtex-actions { display: flex; gap: 8px; margin-top: 8px; align-items: center; flex-wrap: wrap; }
+  .detail-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+  .missing-hint { font-family: var(--mono); font-size: 10px; color: var(--red); opacity: 0.7; margin-left: auto; }
 
-  .status-reason {
+  /* RIGHT SIDE: paste patch */
+  .detail-patch { padding: 12px 14px; }
+
+  .paste-hint {
     font-family: var(--mono); font-size: 10px; color: var(--text-faint);
-    margin-left: auto; font-style: italic;
+    margin-bottom: 8px; line-height: 1.5;
   }
+  .paste-hint .step { color: var(--text-dim); }
+  .paste-hint .step-accent { color: var(--accent); }
 
-  /* PATCH AREA */
-  .patch-area { display: none; padding-top: 4px; }
-  .patch-area.open { display: block; }
-
-  .patch-label {
-    font-family: var(--mono); font-size: 10px; color: var(--text-dim);
-    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;
-  }
-
-  .patch-hint {
-    font-family: var(--mono); font-size: 10px; color: var(--text-faint); margin-bottom: 8px;
-  }
-
-  .patch-textarea {
-    width: 100%; height: 130px; background: var(--bg); border: 1px solid var(--border);
-    border-radius: 3px; color: var(--text); font-family: var(--mono); font-size: 11px;
-    padding: 8px 10px; resize: vertical; outline: none; line-height: 1.5;
+  .patch-ta {
+    width: 100%; height: 140px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 3px;
+    color: var(--text); font-family: var(--mono); font-size: 11px;
+    padding: 8px 10px; resize: none; outline: none; line-height: 1.5;
     transition: border-color 0.15s;
   }
-  .patch-textarea:focus { border-color: var(--accent-dim); }
-  .patch-textarea::placeholder { color: var(--text-faint); }
+  .patch-ta:focus { border-color: var(--accent-dim); }
+  .patch-ta::placeholder { color: var(--text-faint); }
 
   .patch-actions { display: flex; gap: 8px; margin-top: 8px; }
 
-  /* score badge */
-  .score-badge {
-    font-family: var(--mono); font-size: 9px; padding: 1px 5px; border-radius: 2px;
-    margin-left: 6px; vertical-align: middle; opacity: 0.8;
+  /* patched indicator on right side */
+  .patched-banner {
+    display: none;
+    font-family: var(--mono); font-size: 10px; color: var(--green);
+    background: rgba(110,240,160,0.07); border: 1px solid rgba(110,240,160,0.2);
+    border-radius: 3px; padding: 6px 10px; margin-bottom: 8px;
+    align-items: center; gap: 8px;
   }
-  .score-high { background: rgba(110,240,160,0.15); color: var(--green); }
-  .score-mid  { background: rgba(240,200,74,0.15);  color: var(--yellow); }
-  .score-low  { background: rgba(255,95,95,0.15);   color: var(--red); }
+  .patched-banner.show { display: flex; }
 
   /* EMPTY */
-  .empty-state {
-    padding: 60px 20px;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    color: var(--text-faint); gap: 8px;
-    font-family: var(--mono); font-size: 12px;
-  }
+  .empty-state { padding: 60px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-faint); gap: 8px; font-family: var(--mono); font-size: 12px; }
   .empty-icon { font-size: 32px; opacity: 0.3; }
 
   /* TOAST */
-  .toast {
-    position: fixed; bottom: 24px; right: 24px;
-    background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
-    padding: 10px 16px; font-family: var(--mono); font-size: 11px; color: var(--text);
-    opacity: 0; transform: translateY(8px); transition: all 0.2s;
-    z-index: 100; pointer-events: none; max-width: 320px;
-  }
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 10px 16px; font-family: var(--mono); font-size: 11px; color: var(--text); opacity: 0; transform: translateY(8px); transition: all 0.2s; z-index: 100; pointer-events: none; max-width: 340px; }
   .toast.show { opacity: 1; transform: translateY(0); }
   .toast.success { border-color: var(--accent-dim); color: var(--accent); }
-  .toast.error { border-color: var(--red); color: var(--red); }
+  .toast.error   { border-color: var(--red); color: var(--red); }
 </style>
 </head>
 <body>
@@ -350,7 +259,7 @@
     <div class="logo">RefManager</div>
     <div class="tagline">// bibtex pipeline</div>
     <div class="header-stats">
-      <div class="verified-pills">
+      <div class="vpills">
         <div class="vpill vpill-green"><span id="count-green">0</span> verified</div>
         <div class="vpill vpill-yellow"><span id="count-yellow">0</span> uncertain</div>
         <div class="vpill vpill-red"><span id="count-red">0</span> incomplete</div>
@@ -366,46 +275,26 @@
     <!-- LEFT -->
     <div class="left-panel">
       <div class="mode-tabs">
-        <button class="mode-tab active" data-mode="bibtex">BibTeX</button>
-        <button class="mode-tab" data-mode="title">Titles</button>
+        <button class="mode-tab" data-mode="bibtex">BibTeX</button>
+        <button class="mode-tab active" data-mode="title">Titles</button>
       </div>
 
       <div class="panel-header">
         Input <span id="char-count">0 chars</span>
       </div>
 
-      <textarea id="bibtex-input" placeholder="@article{smith2024,
-  author = {Smith, John},
-  title  = {Deep Learning for Energy Systems},
-  journal = {Applied Energy},
-  year   = {2024},
-  doi    = {10.1000/xyz}
-}
+      <textarea id="bibtex-input" placeholder="One title per line:
 
-Paste one or more BibTeX entries..."></textarea>
+Deep Learning for Energy Systems
+TinyBERT: Distilling BERT for NLU
+Attention Is All You Need"></textarea>
 
       <div class="options-row">
         <div class="toggle-group">
-          <label class="toggle">
-            <input type="checkbox" id="opt-enrich">
-            <div class="toggle-pill"></div>
-            <span class="toggle-label">Crossref</span>
-          </label>
-          <label class="toggle">
-            <input type="checkbox" id="opt-abbreviate">
-            <div class="toggle-pill"></div>
-            <span class="toggle-label">Abbreviate</span>
-          </label>
-          <label class="toggle">
-            <input type="checkbox" id="opt-protect">
-            <div class="toggle-pill"></div>
-            <span class="toggle-label">Protect caps</span>
-          </label>
-          <label class="toggle">
-            <input type="checkbox" id="opt-save">
-            <div class="toggle-pill"></div>
-            <span class="toggle-label">Save to DB</span>
-          </label>
+          <label class="toggle"><input type="checkbox" id="opt-enrich"><div class="toggle-pill"></div><span class="toggle-label">Crossref</span></label>
+          <label class="toggle"><input type="checkbox" id="opt-abbreviate"><div class="toggle-pill"></div><span class="toggle-label">Abbreviate</span></label>
+          <label class="toggle"><input type="checkbox" id="opt-protect"><div class="toggle-pill"></div><span class="toggle-label">Protect caps</span></label>
+          <label class="toggle"><input type="checkbox" id="opt-save"><div class="toggle-pill"></div><span class="toggle-label">Save to DB</span></label>
         </div>
         <div class="file-row">
           <span class="file-label">.tex file</span>
@@ -430,65 +319,65 @@ Paste one or more BibTeX entries..."></textarea>
       <div class="right-toolbar">
         <span class="panel-label">References</span>
         <span class="count-badge" id="ref-count">0 entries</span>
-
         <div class="filter-toggle">
           <button class="ftab active" onclick="setFilter('all',this)">All</button>
           <button class="ftab" onclick="setFilter('green',this)">✓ Verified</button>
           <button class="ftab" onclick="setFilter('yellow',this)">⚠ Uncertain</button>
           <button class="ftab" onclick="setFilter('red',this)">✗ Incomplete</button>
         </div>
-
         <div class="toolbar-right">
-          <button class="btn btn-ghost btn-sm" onclick="copyVerified()" id="copy-verified-btn" style="display:none">Copy verified</button>
-          <button class="btn btn-ghost btn-sm" onclick="copyAll()" id="copy-all-btn" style="display:none">Copy all</button>
-          <button class="btn btn-ghost btn-sm" onclick="exportBib()" id="export-btn" style="display:none">Export .bib</button>
+          <button class="btn btn-ghost btn-sm" id="copy-verified-btn" onclick="copyVerified()" style="display:none">Copy verified</button>
+          <button class="btn btn-ghost btn-sm" id="copy-all-btn"      onclick="copyAll()"      style="display:none">Copy all</button>
+          <button class="btn btn-ghost btn-sm" id="export-btn"        onclick="exportBib()"    style="display:none">Export .bib</button>
         </div>
       </div>
 
       <div class="refs-header" id="refs-header" style="display:none">
         <div class="col-head">#</div>
-        <div class="col-head" title="Status">●</div>
-        <div class="col-head">Year / Author</div>
+        <div class="col-head">●</div>
+        <div class="col-head">Year</div>
+        <div class="col-head">Author</div>
         <div class="col-head">Title</div>
         <div class="col-head">Journal</div>
         <div class="col-head">BibKey</div>
       </div>
 
       <div class="refs-list" id="refs-list">
-        <div class="empty-state" id="empty-state">
+        <div class="empty-state">
           <div class="empty-icon">⌗</div>
-          <div>paste bibtex and press process</div>
+          <div>enter titles or bibtex and press process</div>
         </div>
       </div>
     </div>
   </div>
 </div>
-
 <div class="toast" id="toast"></div>
 
 <script>
-let processedData = [];
-let verifiedBib   = {};   // idx -> manually pasted BibTeX string
-let currentFilter = 'all';
-let currentMode   = 'bibtex';
+let data        = [];      // processed entries
+let patches     = {};      // idx -> manually pasted BibTeX
+let openRow     = null;    // currently expanded row index
+let curFilter   = 'all';
+let curMode     = 'title';
 
 // ── MODE TABS ────────────────────────────────────────────
 document.querySelectorAll('.mode-tab').forEach(tab => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
-    currentMode = tab.dataset.mode;
+    curMode = tab.dataset.mode;
     const ta = document.getElementById('bibtex-input');
-    ta.placeholder = currentMode === 'title'
-      ? 'Deep Learning for Energy Systems\nNeural Networks for Battery Management\n\nOne title per line'
-      : '@article{smith2024,\n  author = {Smith, John},\n  title  = {...},\n  journal = {Applied Energy},\n  year   = {2024}\n}\n\nPaste BibTeX entries...';
+    if (curMode === 'bibtex') {
+      ta.placeholder = '@article{smith2024,\n  author = {Smith, John},\n  title  = {...},\n  journal = {Applied Energy},\n  year   = {2024}\n}\n\nPaste BibTeX entries...';
+    } else {
+      ta.placeholder = 'One title per line:\n\nDeep Learning for Energy Systems\nTinyBERT: Distilling BERT for NLU\nAttention Is All You Need';
+    }
   });
 });
 
 document.getElementById('bibtex-input').addEventListener('input', function() {
   document.getElementById('char-count').textContent = this.value.length.toLocaleString() + ' chars';
 });
-
 document.getElementById('latex-file').addEventListener('change', function() {
   const d = document.getElementById('file-display');
   if (this.files.length) { d.textContent = this.files[0].name; d.classList.add('has-file'); }
@@ -496,315 +385,313 @@ document.getElementById('latex-file').addEventListener('change', function() {
 });
 
 // ── SCORING ──────────────────────────────────────────────
-function scoreEntry(r) {
-  let score = 0;
-  const missing = [];
-
-  const doi = (r.DOI || '').trim();
-  if (doi && doi.length > 5) score += 3;
-  else missing.push('no DOI');
-
-  const key = (r.Key || r.Reference || '').trim();
-  if (key && !/^\d+$/.test(key) && key.length > 2) score += 2;
-  else missing.push('bad key');
-
-  const year = (r.Year || '').trim();
-  if (year && /\d{4}/.test(year)) score += 1;
-  else missing.push('no year');
-
-  const authors = (r.Authors || '').trim();
-  if (authors && authors.length > 3) score += 1;
-  else missing.push('no authors');
-
-  const title = (r.Title || '').trim();
-  if (title && title.length > 10) score += 1;
-  else missing.push('no title');
-
-  const journal = (r['Journal/Booktitle'] || '').trim();
-  if (journal && journal.length > 2) score += 1;
-  else missing.push('no journal');
-
-  const sim = r.Title_Similarity || 0;
-  if (sim >= 85) score += 3;
-  else if (sim >= 60) score += 1;
-
-  let status;
-  if (score >= 7)      status = 'green';
-  else if (score >= 4) status = 'yellow';
-  else                 status = 'red';
-
-  return { status, score, missing };
+function score(r) {
+  let s = 0, missing = [];
+  const doi = (r.DOI||'').trim();
+  doi && doi.length > 5 ? s+=3 : missing.push('no DOI');
+  const key = (r.Key||r.Reference||'').trim();
+  key && !/^\d+$/.test(key) && key.length>2 ? s+=2 : missing.push('bad key');
+  const yr = (r.Year||'').trim();
+  yr && /\d{4}/.test(yr) ? s+=1 : missing.push('no year');
+  const au = (r.Authors||'').trim();
+  au && au.length>3 ? s+=1 : missing.push('no authors');
+  const ti = (r.Title||'').trim();
+  ti && ti.length>10 ? s+=1 : missing.push('no title');
+  const jo = (r['Journal/Booktitle']||'').trim();
+  jo && jo.length>2 ? s+=1 : missing.push('no journal');
+  const sim = r.Title_Similarity||0;
+  if (sim>=85) s+=3; else if (sim>=60) s+=1;
+  return { status: s>=7?'green':s>=4?'yellow':'red', score:s, missing };
 }
 
 // ── PROCESS ──────────────────────────────────────────────
 async function processRefs() {
   const content = document.getElementById('bibtex-input').value.trim();
-  if (!content) { showToast('No input provided', 'error'); return; }
-
+  if (!content) { showToast('No input provided','error'); return; }
   setLoading(true);
-  verifiedBib = {};
+  patches = {}; openRow = null;
 
-  const formData = new FormData();
-  formData.append('bibtex_content', content);
-  formData.append('input_mode', currentMode);
-  formData.append('enrich',    document.getElementById('opt-enrich').checked);
-  formData.append('abbreviate',document.getElementById('opt-abbreviate').checked);
-  formData.append('protect',   document.getElementById('opt-protect').checked);
-  formData.append('save_to_db',document.getElementById('opt-save').checked);
+  const fd = new FormData();
+  fd.append('bibtex_content', content);
+  fd.append('input_mode',  curMode);
+  fd.append('enrich',      document.getElementById('opt-enrich').checked);
+  fd.append('abbreviate',  document.getElementById('opt-abbreviate').checked);
+  fd.append('protect',     document.getElementById('opt-protect').checked);
+  fd.append('save_to_db',  document.getElementById('opt-save').checked);
   const lf = document.getElementById('latex-file').files[0];
-  if (lf) formData.append('latex_file', lf);
+  if (lf) fd.append('latex_file', lf);
 
   try {
-    const res  = await fetch('/api/process', { method: 'POST', body: formData });
-    const data = await res.json();
-    if (!res.ok || !data.success) { showToast(data.error || 'Processing failed', 'error'); setLoading(false); return; }
-    processedData = data.full_data || data.data || [];
-    renderAll();
-    showToast('Processed ' + processedData.length + ' references');
+    const res  = await fetch('/api/process', {method:'POST', body:fd});
+    const json = await res.json();
+    if (!res.ok || !json.success) { showToast(json.error||'Processing failed','error'); setLoading(false); return; }
+    data = json.full_data || json.data || [];
+    reScore();
+    render();
+    showToast('Processed ' + data.length + ' references');
   } catch(e) {
-    showToast('Network error: ' + e.message, 'error');
+    showToast('Network error: '+e.message,'error');
   }
   setLoading(false);
 }
 
-// ── RENDER ────────────────────────────────────────────────
-function renderAll() {
-  const counts = { green: 0, yellow: 0, red: 0 };
-  processedData.forEach((r, i) => {
-    // if manually patched, always green
-    if (verifiedBib[i]) { r._status = 'green'; r._missing = []; }
-    else {
-      const v = scoreEntry(r);
-      r._status  = v.status;
-      r._missing = v.missing;
-    }
-    counts[r._status]++;
+function reScore() {
+  data.forEach((r,i) => {
+    if (patches[i]) { r._status='green'; r._missing=[]; }
+    else { const v=score(r); r._status=v.status; r._missing=v.missing; }
   });
+}
 
+// ── RENDER ────────────────────────────────────────────────
+function render() {
+  const counts = {green:0,yellow:0,red:0};
+  data.forEach(r => counts[r._status]++);
   document.getElementById('count-green').textContent  = counts.green;
   document.getElementById('count-yellow').textContent = counts.yellow;
   document.getElementById('count-red').textContent    = counts.red;
-  document.getElementById('stat-total').textContent   = processedData.length;
-  document.getElementById('ref-count').textContent    = processedData.length + ' entries';
+  document.getElementById('stat-total').textContent   = data.length;
+  document.getElementById('ref-count').textContent    = data.length+' entries';
 
-  const show = processedData.length > 0;
+  const show = data.length > 0;
   document.getElementById('refs-header').style.display = show ? 'grid' : 'none';
   ['copy-verified-btn','copy-all-btn','export-btn'].forEach(id =>
     document.getElementById(id).style.display = show ? 'inline-block' : 'none');
 
-  renderFiltered();
-}
-
-function renderFiltered() {
   const list = document.getElementById('refs-list');
-  const filtered = processedData
-    .map((r, i) => ({ r, i }))
-    .filter(({ r }) => currentFilter === 'all' || r._status === currentFilter);
+  const filtered = data.map((r,i)=>({r,i})).filter(({r})=> curFilter==='all'||r._status===curFilter);
 
   if (!filtered.length) {
     list.innerHTML = '<div class="empty-state"><div class="empty-icon">⌗</div><div>no entries match filter</div></div>';
     return;
   }
 
-  list.innerHTML = filtered.map(({ r, i }) => {
-    const year    = r.Year || '—';
-    const author  = getFirstAuthor(r.Authors);
-    const title   = r.Title || '—';
-    const journal = r['Journal/Booktitle'] || '—';
-    const key     = r.Key || r.Reference || '—';
-    const status  = r._status;
-    const patched = !!verifiedBib[i];
-    const bib     = getBestBib(i);
-    const sim     = r.Title_Similarity || 0;
-    const simBadge = sim > 0
-      ? `<span class="score-badge ${sim>=85?'score-high':sim>=60?'score-mid':'score-low'}">${sim}%</span>`
-      : '';
-    const bibClass = status === 'green' ? 'bib-verified' : status === 'yellow' ? 'bib-uncertain' : 'bib-incomplete';
-    const missingTxt = r._missing && r._missing.length ? r._missing.join(', ') : '';
+  list.innerHTML = filtered.map(({r,i}) => rowHTML(r,i)).join('');
 
-    return `
-    <div class="ref-row" id="row-${i}" onclick="toggleExpand(${i})">
-      <div class="ref-cell cell-idx">${i+1}</div>
-      <div class="ref-cell cell-status"><span class="status-dot dot-${status}" title="${status}${patched?' (manually patched)':''}"></span></div>
-      <div class="ref-cell cell-year"><div>${escHtml(year)}</div><div class="author-sub">${escHtml(author)}</div></div>
-      <div class="ref-cell cell-title">${escHtml(title)}${simBadge}</div>
-      <div class="ref-cell cell-journal">${escHtml(journal)}</div>
-      <div class="ref-cell cell-key">${escHtml(key)}</div>
-    </div>
-    <div class="expand-panel" id="exp-${i}">
-      <div class="expand-tabs">
-        <button class="etab active" id="etab-bib-btn-${i}" onclick="switchTab(event,${i},'bib')">BibTeX</button>
-        <button class="etab" id="etab-patch-btn-${i}" onclick="switchTab(event,${i},'patch')">
-          ${patched ? '✓ Patched' : 'Patch manually'}
-        </button>
-      </div>
+  // re-open previously open row if still visible
+  if (openRow !== null) {
+    const panel = document.getElementById('detail-'+openRow);
+    const row   = document.getElementById('row-'+openRow);
+    if (panel) { panel.classList.add('open'); if(row) row.classList.add('selected'); }
+    else openRow = null;
+  }
+}
 
-      <!-- BIB TAB -->
-      <div id="etab-bib-${i}">
-        <div class="bibtex-view ${bibClass}">${escHtml(bib)}</div>
-        <div class="bibtex-actions">
-          <button class="btn btn-ghost btn-sm" onclick="copyOneBib(event,${i})">Copy BibTeX</button>
-          ${status !== 'green' || patched ? `<button class="btn btn-ghost btn-sm" onclick="copyTitle(event,${i})">Copy title → Google Scholar</button>` : ''}
-          ${patched ? `<button class="btn btn-danger btn-sm" onclick="unpatch(event,${i})">Remove patch</button>` : ''}
-          ${missingTxt ? `<span class="status-reason">missing: ${escHtml(missingTxt)}</span>` : ''}
+function rowHTML(r, i) {
+  const year    = r.Year || '—';
+  const author  = firstAuthor(r.Authors);
+  const title   = r.Title || '—';
+  const journal = r['Journal/Booktitle'] || '—';
+  const key     = r.Key || r.Reference || '—';
+  const status  = r._status;
+  const patched = !!patches[i];
+  const bib     = getBib(i);
+  const sim     = r.Title_Similarity||0;
+  const simBadge = sim>0
+    ? `<span class="sim-badge ${sim>=85?'sim-high':sim>=60?'sim-mid':'sim-low'}">${sim}%</span>`
+    : '';
+  const bibClass = `bib-${status}`;
+  const missingTxt = (r._missing||[]).join(', ');
+
+  return `
+  <div class="ref-row${openRow===i?' selected':''}" id="row-${i}" onclick="toggleRow(${i})">
+    <div class="ref-cell cell-idx">${i+1}</div>
+    <div class="ref-cell cell-status"><span class="status-dot dot-${status}" title="${status}${patched?' (patched)':''}"></span></div>
+    <div class="ref-cell cell-year">${escHtml(year)}</div>
+    <div class="ref-cell cell-author">${escHtml(author)}</div>
+    <div class="ref-cell cell-title">${escHtml(title)}${simBadge}</div>
+    <div class="ref-cell cell-journal">${escHtml(journal)}</div>
+    <div class="ref-cell cell-key">${escHtml(key)}</div>
+  </div>
+  <div class="detail-panel${openRow===i?' open':''}" id="detail-${i}">
+    <div class="detail-inner">
+      <!-- LEFT: current BibTeX -->
+      <div class="detail-bib">
+        <div class="detail-section-label">
+          <span>Current BibTeX</span>
+          ${patched ? '<span style="color:var(--green);font-size:10px">✓ patched</span>' : ''}
+        </div>
+        <div class="bibtex-pre ${bibClass}" id="bibpre-${i}">${escHtml(bib)}</div>
+        <div class="detail-actions">
+          <button class="btn btn-ghost btn-sm" onclick="copyBib(event,${i})">Copy BibTeX</button>
+          ${status!=='green'||patched ? `<button class="btn btn-ghost btn-sm" onclick="copyTitleClick(event,${i})">Copy title</button>` : ''}
+          ${patched ? `<button class="btn btn-danger btn-sm" onclick="removePatch(event,${i})">Remove patch</button>` : ''}
+          ${missingTxt ? `<span class="missing-hint">${escHtml(missingTxt)}</span>` : ''}
         </div>
       </div>
-
-      <!-- PATCH TAB -->
-      <div class="patch-area" id="etab-patch-${i}">
-        <div class="patch-hint">1. Click "Copy title" above &nbsp;→&nbsp; 2. Search Google Scholar &nbsp;→&nbsp; 3. Paste BibTeX here</div>
-        <textarea class="patch-textarea" id="patch-input-${i}" placeholder="@article{key,&#10;  author = {Last, First},&#10;  title  = {...},&#10;  journal = {...},&#10;  year   = {2024},&#10;  doi    = {10.xxx/yyy}&#10;}">${patched ? verifiedBib[i] : ''}</textarea>
+      <!-- RIGHT: paste patch -->
+      <div class="detail-patch">
+        <div class="detail-section-label">Paste from Google Scholar</div>
+        ${patched
+          ? `<div class="patched-banner show">✓ This entry has been manually verified. You can paste a new version below to replace it.</div>`
+          : `<div class="paste-hint"><span class="step">1.</span> Click <span class="step-accent">Copy title</span> →  search Google Scholar<br><span class="step">2.</span> Click "Cite" → BibTeX → copy<br><span class="step">3.</span> Paste here and apply</div>`
+        }
+        <textarea class="patch-ta" id="patch-${i}" placeholder="@article{key,&#10;  author = {...},&#10;  title  = {...},&#10;  year   = {2024},&#10;  doi    = {10.xxx/yyy}&#10;}">${patches[i]||''}</textarea>
         <div class="patch-actions">
-          <button class="btn btn-primary btn-sm" onclick="applyPatch(event,${i})">Apply &amp; mark verified ✓</button>
-          <button class="btn btn-ghost btn-sm" onclick="switchTab(event,${i},'bib')">Cancel</button>
+          <button class="btn btn-primary btn-sm" onclick="applyPatch(event,${i})">Apply &amp; verify ✓</button>
         </div>
       </div>
-    </div>`;
-  }).join('');
+    </div>
+  </div>`;
+}
+
+// ── ROW TOGGLE ────────────────────────────────────────────
+function toggleRow(i) {
+  if (openRow === i) {
+    // close
+    const panel = document.getElementById('detail-'+i);
+    const row   = document.getElementById('row-'+i);
+    if(panel) panel.classList.remove('open');
+    if(row)   row.classList.remove('selected');
+    openRow = null;
+  } else {
+    // close old
+    if (openRow !== null) {
+      const old = document.getElementById('detail-'+openRow);
+      const oldr = document.getElementById('row-'+openRow);
+      if(old)  old.classList.remove('open');
+      if(oldr) oldr.classList.remove('selected');
+    }
+    openRow = i;
+    const panel = document.getElementById('detail-'+i);
+    const row   = document.getElementById('row-'+i);
+    if(panel) panel.classList.add('open');
+    if(row)   row.classList.add('selected');
+  }
 }
 
 function setFilter(f, el) {
-  currentFilter = f;
-  document.querySelectorAll('.ftab').forEach(t => t.classList.remove('active'));
+  curFilter = f;
+  document.querySelectorAll('.ftab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
-  renderFiltered();
-}
-
-// ── EXPAND / TABS ─────────────────────────────────────────
-function toggleExpand(i) {
-  const panel = document.getElementById(`exp-${i}`);
-  const row   = document.getElementById(`row-${i}`);
-  if (!panel) return;
-  const isOpen = panel.classList.contains('open');
-  document.querySelectorAll('.expand-panel.open').forEach(el => {
-    el.classList.remove('open');
-    const idx = el.id.replace('exp-','');
-    const r = document.getElementById(`row-${idx}`);
-    if (r) r.classList.remove('expanded');
-  });
-  if (!isOpen) {
-    panel.classList.add('open');
-    row.classList.add('expanded');
-  }
-}
-
-function switchTab(e, i, tab) {
-  e.stopPropagation();
-  const bibDiv   = document.getElementById(`etab-bib-${i}`);
-  const patchDiv = document.getElementById(`etab-patch-${i}`);
-  const bibBtn   = document.getElementById(`etab-bib-btn-${i}`);
-  const patchBtn = document.getElementById(`etab-patch-btn-${i}`);
-
-  if (tab === 'bib') {
-    bibDiv.style.display   = 'block';
-    patchDiv.classList.remove('open');
-    bibBtn.classList.add('active');
-    patchBtn.classList.remove('active');
-  } else {
-    bibDiv.style.display = 'none';
-    patchDiv.classList.add('open');
-    patchBtn.classList.add('active');
-    bibBtn.classList.remove('active');
-  }
+  render();
 }
 
 // ── PATCH ─────────────────────────────────────────────────
 function applyPatch(e, i) {
   e.stopPropagation();
-  const val = (document.getElementById(`patch-input-${i}`).value || '').trim();
-  if (!val || !val.includes('@')) { showToast('Paste a valid BibTeX entry first', 'error'); return; }
-  verifiedBib[i] = val;
-  renderAll();
-  showToast('Patched — entry is now verified ✓');
+  const val = (document.getElementById('patch-'+i).value||'').trim();
+  if (!val || !val.includes('@')) { showToast('Paste a valid BibTeX entry','error'); return; }
+  patches[i] = val;
+  // parse metadata from pasted BibTeX to update table row
+  const parsed = quickParseBib(val);
+  if (parsed.year)    data[i].Year             = parsed.year;
+  if (parsed.authors) data[i].Authors          = parsed.authors;
+  if (parsed.title)   data[i].Title            = parsed.title;
+  if (parsed.journal) data[i]['Journal/Booktitle'] = parsed.journal;
+  if (parsed.key)     data[i].Key              = parsed.key;
+  if (parsed.doi)     data[i].DOI              = parsed.doi;
+  reScore();
+  render();
+  showToast('Verified ✓ — table updated');
 }
 
-function unpatch(e, i) {
+function removePatch(e, i) {
   e.stopPropagation();
-  delete verifiedBib[i];
-  renderAll();
+  delete patches[i];
+  reScore();
+  render();
   showToast('Patch removed');
 }
 
-// ── COPY/EXPORT ───────────────────────────────────────────
-function copyTitle(e, i) {
-  e.stopPropagation();
-  const title = processedData[i].Title || '';
-  navigator.clipboard.writeText(title).then(() =>
-    showToast('Title copied — search in Google Scholar'));
+// quick BibTeX field extractor (no full parser needed)
+function quickParseBib(bib) {
+  const get = (field) => {
+    const m = bib.match(new RegExp(field+'\\s*=\\s*[{"]([^{}]*(?:\\{[^{}]*\\}[^{}]*)*)[}"]','i'));
+    return m ? m[1].replace(/[{}]/g,'').trim() : '';
+  };
+  // extract key from first line @type{key,
+  const keyM = bib.match(/@\w+\{([^,]+),/);
+  return {
+    key:     keyM ? keyM[1].trim() : '',
+    year:    get('year'),
+    authors: get('author'),
+    title:   get('title'),
+    journal: get('journal') || get('booktitle'),
+    doi:     get('doi'),
+  };
 }
 
-function copyOneBib(e, i) {
+// ── COPY / EXPORT ─────────────────────────────────────────
+function copyTitleClick(e, i) {
   e.stopPropagation();
-  navigator.clipboard.writeText(getBestBib(i)).then(() => showToast('BibTeX copied'));
+  navigator.clipboard.writeText(data[i].Title||'').then(()=>
+    showToast('Title copied — search Google Scholar'));
+}
+
+function copyBib(e, i) {
+  e.stopPropagation();
+  navigator.clipboard.writeText(getBib(i)).then(()=>showToast('BibTeX copied'));
 }
 
 function copyVerified() {
-  const bibs = processedData
-    .map((r, i) => r._status === 'green' ? getBestBib(i) : null)
-    .filter(Boolean);
-  navigator.clipboard.writeText(bibs.join('\n\n')).then(() =>
-    showToast('Copied ' + bibs.length + ' verified entries'));
+  const bibs = data.filter(r=>r._status==='green').map((_,i)=>getBib(i)).filter(Boolean);
+  // rebuild with correct indices
+  const out = data.map((r,i)=> r._status==='green' ? getBib(i) : null).filter(Boolean);
+  navigator.clipboard.writeText(out.join('\n\n')).then(()=>
+    showToast('Copied '+out.length+' verified entries'));
 }
 
 function copyAll() {
-  const bibs = processedData.map((_, i) => getBestBib(i)).filter(Boolean);
-  navigator.clipboard.writeText(bibs.join('\n\n')).then(() =>
-    showToast('Copied ' + bibs.length + ' entries'));
+  const out = data.map((_,i)=>getBib(i)).filter(Boolean);
+  navigator.clipboard.writeText(out.join('\n\n')).then(()=>
+    showToast('Copied '+out.length+' entries'));
 }
 
 function exportBib() {
-  const bibs = processedData.map((_, i) => getBestBib(i)).filter(Boolean).join('\n\n');
-  const blob = new Blob([bibs], { type: 'text/plain' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = 'references.bib'; a.click();
+  const out = data.map((_,i)=>getBib(i)).filter(Boolean).join('\n\n');
+  const a = Object.assign(document.createElement('a'),{
+    href: URL.createObjectURL(new Blob([out],{type:'text/plain'})),
+    download: 'references.bib'
+  });
+  a.click();
   showToast('Exported references.bib');
 }
 
 // ── HELPERS ───────────────────────────────────────────────
-function getBestBib(i) {
-  if (verifiedBib[i]) return verifiedBib[i];
-  const r = processedData[i];
-  return r.Crossref_BibTeX_Protected || r.Crossref_BibTeX_Abbrev
-    || r.Crossref_BibTeX_LocalKey || r.Crossref_BibTeX || r.BibTeX || '';
+function getBib(i) {
+  if (patches[i]) return patches[i];
+  const r = data[i];
+  return r.Crossref_BibTeX_Protected||r.Crossref_BibTeX_Abbrev||
+         r.Crossref_BibTeX_LocalKey||r.Crossref_BibTeX||r.BibTeX||'';
 }
 
-function getFirstAuthor(authors) {
+function firstAuthor(authors) {
   if (!authors) return '—';
-  return (authors.split(/,|and\s/)[0].trim().split(/\s+/).pop()) || '—';
+  return (authors.split(/,|and\s/)[0].trim().split(/\s+/).pop())||'—';
 }
 
 function clearInput() {
-  document.getElementById('bibtex-input').value = '';
-  document.getElementById('char-count').textContent = '0 chars';
+  document.getElementById('bibtex-input').value='';
+  document.getElementById('char-count').textContent='0 chars';
 }
 
 function clearAll() {
-  processedData = []; verifiedBib = {};
-  ['count-green','count-yellow','count-red'].forEach(id => document.getElementById(id).textContent = '0');
-  document.getElementById('stat-total').textContent = '0';
-  document.getElementById('ref-count').textContent = '0 entries';
-  document.getElementById('refs-header').style.display = 'none';
-  ['copy-verified-btn','copy-all-btn','export-btn'].forEach(id =>
-    document.getElementById(id).style.display = 'none');
-  document.getElementById('refs-list').innerHTML =
-    '<div class="empty-state"><div class="empty-icon">⌗</div><div>paste bibtex and press process</div></div>';
+  data=[]; patches={}; openRow=null;
+  ['count-green','count-yellow','count-red'].forEach(id=>document.getElementById(id).textContent='0');
+  document.getElementById('stat-total').textContent='0';
+  document.getElementById('ref-count').textContent='0 entries';
+  document.getElementById('refs-header').style.display='none';
+  ['copy-verified-btn','copy-all-btn','export-btn'].forEach(id=>
+    document.getElementById(id).style.display='none');
+  document.getElementById('refs-list').innerHTML=
+    '<div class="empty-state"><div class="empty-icon">⌗</div><div>enter titles or bibtex and press process</div></div>';
   showToast('Cleared');
 }
 
 function setLoading(v) {
-  document.getElementById('loading-bar').classList.toggle('active', v);
-  const btn = document.getElementById('process-btn');
-  btn.disabled = v; btn.textContent = v ? 'Processing…' : 'Process';
+  document.getElementById('loading-bar').classList.toggle('active',v);
+  const btn=document.getElementById('process-btn');
+  btn.disabled=v; btn.textContent=v?'Processing…':'Process';
 }
 
-function showToast(msg, type = 'success') {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.className = 'toast ' + type + ' show';
-  setTimeout(() => t.classList.remove('show'), 3000);
+function showToast(msg, type='success') {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast '+type+' show';
+  setTimeout(()=>t.classList.remove('show'),3000);
 }
 
 function escHtml(s) {
-  if (s == null) return '';
+  if (s==null) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 </script>
